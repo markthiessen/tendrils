@@ -37,8 +37,8 @@ describe("parseId", () => {
   });
 
   it("parses project-qualified ID", () => {
-    expect(parseId("Rocket::A01.T02.S001")).toEqual({
-      project: "Rocket",
+    expect(parseId("MyProject::A01.T02.S001")).toEqual({
+      project: "MyProject",
       activity: 1,
       task: 2,
       story: 1,
@@ -89,8 +89,8 @@ describe("formatBugId", () => {
 
 describe("formatFullId", () => {
   it("adds project prefix", () => {
-    expect(formatFullId("Rocket", "A01.T02.S001")).toBe(
-      "Rocket::A01.T02.S001",
+    expect(formatFullId("MyProject", "A01.T02.S001")).toBe(
+      "MyProject::A01.T02.S001",
     );
   });
 });

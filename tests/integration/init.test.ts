@@ -38,15 +38,15 @@ afterEach(() => {
 
 describe("td init", () => {
   it("creates a new project", () => {
-    const output = td(["init", "rocket"]);
-    expect(output).toContain("Project 'rocket' created");
+    const output = td(["init", "my-project"]);
+    expect(output).toContain("Project 'my-project' created");
 
     // Check files were created
     expect(
-      fs.existsSync(path.join(testHome, "projects", "rocket", "map.db")),
+      fs.existsSync(path.join(testHome, "projects", "my-project", "map.db")),
     ).toBe(true);
     expect(
-      fs.existsSync(path.join(testHome, "projects", "rocket", "config.toml")),
+      fs.existsSync(path.join(testHome, "projects", "my-project", "config.toml")),
     ).toBe(true);
     expect(fs.existsSync(path.join(testCwd, ".tendrils.toml"))).toBe(true);
 
@@ -55,27 +55,27 @@ describe("td init", () => {
       path.join(testCwd, ".tendrils.toml"),
       "utf-8",
     );
-    expect(binding).toContain('project = "rocket"');
+    expect(binding).toContain('project = "my-project"');
   });
 
   it("returns JSON on --json", () => {
-    const result = tdJson(["init", "rocket"]) as {
+    const result = tdJson(["init", "my-project"]) as {
       ok: boolean;
       data: { project: string };
     };
     expect(result.ok).toBe(true);
-    expect(result.data.project).toBe("rocket");
+    expect(result.data.project).toBe("my-project");
   });
 
   it("binds to existing project on second init", () => {
-    td(["init", "rocket"]);
+    td(["init", "my-project"]);
 
     // Init from a different directory
     const otherCwd = fs.mkdtempSync(
       path.join(os.tmpdir(), "tendrils-other-"),
     );
     try {
-      const output = td(["init", "rocket"], { cwd: otherCwd });
+      const output = td(["init", "my-project"], { cwd: otherCwd });
       expect(output).toContain("Bound current directory");
     } finally {
       fs.rmSync(otherCwd, { recursive: true, force: true });
@@ -103,8 +103,8 @@ describe("td project list", () => {
   });
 
   it("lists created projects", () => {
-    td(["init", "rocket"]);
-    td(["init", "atlas"]);
+    td(["init", "my-project"]);
+    td(["init", "other-project"]);
     const result = tdJson(["project", "list"]) as {
       ok: boolean;
       data: Array<{ slug: string; name: string }>;
@@ -112,20 +112,20 @@ describe("td project list", () => {
     expect(result.ok).toBe(true);
     expect(result.data).toHaveLength(2);
     const slugs = result.data.map((p) => p.slug).sort();
-    expect(slugs).toEqual(["atlas", "rocket"]);
+    expect(slugs).toEqual(["my-project", "other-project"]);
   });
 });
 
 describe("td project info", () => {
   it("shows project details", () => {
-    td(["init", "rocket"]);
-    const result = tdJson(["project", "info", "rocket"]) as {
+    td(["init", "my-project"]);
+    const result = tdJson(["project", "info", "my-project"]) as {
       ok: boolean;
       data: { slug: string; name: string; bindings: Array<{ path: string }> };
     };
     expect(result.ok).toBe(true);
-    expect(result.data.slug).toBe("rocket");
-    expect(result.data.name).toBe("rocket");
+    expect(result.data.slug).toBe("my-project");
+    expect(result.data.name).toBe("my-project");
     expect(result.data.bindings).toHaveLength(1);
   });
 });
