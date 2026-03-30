@@ -15,6 +15,7 @@ import { registerReleaseCommand } from "./cli/release.js";
 import { registerWorkflowCommands } from "./cli/status.js";
 import { registerLogCommands } from "./cli/log.js";
 import { registerMapCommand } from "./cli/map.js";
+import { registerUiCommand } from "./cli/ui.js";
 import { closeDb } from "./db/index.js";
 
 const program = new Command();
@@ -41,6 +42,7 @@ registerReleaseCommand(program);
 registerWorkflowCommands(program);
 registerLogCommands(program);
 registerMapCommand(program);
+registerUiCommand(program);
 
 // Error handling
 program.exitOverride();

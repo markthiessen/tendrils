@@ -1,0 +1,528 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #0f172a;
+  color: #e2e8f0;
+  line-height: 1.5;
+}
+
+.loading, .error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  font-size: 18px;
+  color: #94a3b8;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 12px 24px;
+  background: #1e293b;
+  border-bottom: 1px solid #334155;
+}
+
+.app-header h1 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.stats-bar {
+  display: flex;
+  gap: 16px;
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.stat-detail {
+  color: #64748b;
+}
+
+.app-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.app-main {
+  flex: 1;
+  overflow: auto;
+  padding: 24px;
+}
+
+.app-sidebar {
+  width: 320px;
+  border-left: 1px solid #334155;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Map Grid */
+.map-container {
+  min-width: min-content;
+}
+
+.map-grid {
+  display: grid;
+  gap: 0;
+}
+
+.grid-corner {
+  background: #0f172a;
+  position: sticky;
+  left: 0;
+  z-index: 2;
+}
+
+.grid-label {
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: #0f172a;
+  position: sticky;
+  left: 0;
+  z-index: 1;
+}
+
+.grid-add-col {
+  padding: 8px;
+}
+
+/* Activity Headers */
+.activity-header {
+  padding: 10px 12px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  font-weight: 600;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.activity-id {
+  color: #3b82f6;
+  font-size: 12px;
+  font-family: monospace;
+  flex-shrink: 0;
+}
+
+.activity-title {
+  flex: 1;
+}
+
+/* Task Headers */
+.task-header {
+  padding: 8px 12px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-top: none;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.task-id {
+  font-family: monospace;
+  font-size: 11px;
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.task-title {
+  flex: 1;
+  color: #94a3b8;
+}
+
+/* Release Labels */
+.release-label {
+  padding: 12px;
+  font-weight: 600;
+  font-size: 13px;
+  color: #f1f5f9;
+  background: #0f172a;
+  border-top: 1px solid #334155;
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+}
+
+.release-add {
+  padding: 12px 12px 12px 132px;
+}
+
+/* Map Cells */
+.map-cell {
+  padding: 8px;
+  border: 1px solid #1e293b;
+  border-top: 1px solid #334155;
+  min-height: 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: background 0.15s;
+}
+
+.map-cell--dragover {
+  background: #1e3a5f;
+  border-color: #3b82f6;
+}
+
+.map-cell--add {
+  border-top: none;
+  min-height: auto;
+}
+
+/* Story Card */
+.story-card {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 10px 12px;
+  transition: border-color 0.15s, opacity 0.15s;
+  cursor: grab;
+}
+
+.story-card:hover {
+  border-color: #475569;
+}
+
+.story-card--dragging {
+  opacity: 0.4;
+}
+
+.story-card--done {
+  opacity: 0.6;
+}
+
+.story-card--cancelled {
+  opacity: 0.4;
+}
+
+.story-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.story-id {
+  font-family: monospace;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.story-title {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.story-desc {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.story-claimed {
+  font-size: 11px;
+  color: #8b5cf6;
+  margin-top: 4px;
+}
+
+.story-meta {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.release-select {
+  font-size: 11px;
+  padding: 2px 4px;
+  background: #0f172a;
+  color: #94a3b8;
+  border: 1px solid #334155;
+  border-radius: 4px;
+}
+
+.story-estimate {
+  font-size: 10px;
+  color: #64748b;
+  background: #334155;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.story-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.story-actions button, .bug-actions button {
+  padding: 3px 10px;
+  font-size: 11px;
+  border: 1px solid #475569;
+  border-radius: 4px;
+  background: #0f172a;
+  color: #e2e8f0;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.story-actions button:hover, .bug-actions button:hover {
+  background: #1e293b;
+  border-color: #3b82f6;
+}
+
+.btn-delete, .btn-delete-subtle {
+  background: none;
+  border: none;
+  color: #475569;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 4px;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.btn-delete:hover, .btn-delete-subtle:hover {
+  color: #ef4444;
+}
+
+/* Editable Text */
+.editable-text {
+  cursor: text;
+  border-radius: 3px;
+  padding: 1px 4px;
+  margin: -1px -4px;
+  transition: background 0.15s;
+}
+
+.editable-text:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.editable-input {
+  background: #0f172a;
+  color: #e2e8f0;
+  border: 1px solid #3b82f6;
+  border-radius: 3px;
+  padding: 1px 4px;
+  font: inherit;
+  width: 100%;
+  outline: none;
+}
+
+.placeholder {
+  color: #475569;
+  font-style: italic;
+}
+
+/* Add Forms */
+.add-button {
+  font-size: 12px;
+  color: #64748b;
+  background: none;
+  border: 1px dashed #334155;
+  border-radius: 4px;
+  padding: 4px 12px;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.add-button:hover {
+  color: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.add-button-small {
+  font-size: 14px;
+  color: #64748b;
+  background: none;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.add-button-small:hover {
+  color: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.add-form {
+  display: flex;
+  gap: 6px;
+}
+
+.add-form input {
+  flex: 1;
+  font-size: 12px;
+  padding: 4px 8px;
+  background: #0f172a;
+  color: #e2e8f0;
+  border: 1px solid #3b82f6;
+  border-radius: 4px;
+  outline: none;
+}
+
+.add-form select {
+  font-size: 12px;
+  padding: 4px;
+  background: #0f172a;
+  color: #e2e8f0;
+  border: 1px solid #3b82f6;
+  border-radius: 4px;
+}
+
+.add-form button {
+  font-size: 11px;
+  padding: 4px 10px;
+  background: #3b82f6;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.add-form button:hover {
+  background: #2563eb;
+}
+
+/* Bug Panel */
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.bug-panel h3, .activity-feed h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.bug-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bug-card {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.bug-card-header {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.bug-id {
+  font-family: monospace;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.bug-title {
+  font-size: 13px;
+}
+
+.bug-claimed {
+  font-size: 11px;
+  color: #8b5cf6;
+  margin-top: 2px;
+}
+
+/* Activity Feed */
+.feed-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.feed-entry {
+  font-size: 12px;
+  padding: 6px 8px;
+  background: #1e293b;
+  border-radius: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.feed-time {
+  color: #475569;
+  font-family: monospace;
+  font-size: 11px;
+}
+
+.feed-agent {
+  color: #8b5cf6;
+  font-size: 11px;
+}
+
+.feed-status {
+  color: #f59e0b;
+  font-size: 11px;
+}
+
+.feed-message {
+  color: #94a3b8;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 80px 24px;
+  color: #94a3b8;
+}
+
+.empty-state h2 {
+  font-size: 24px;
+  color: #e2e8f0;
+  margin-bottom: 8px;
+}
+
+.empty-state code {
+  background: #1e293b;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 14px;
+}
