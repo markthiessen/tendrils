@@ -6,6 +6,7 @@ import { errorEnvelope } from "./output/json.js";
 import { registerInitCommand } from "./cli/init.js";
 import { registerProjectCommand } from "./cli/project.js";
 import { registerSetProjectCommand } from "./cli/set-project.js";
+import { registerClaudeCommand } from "./cli/claude.js";
 import { closeDb } from "./db/index.js";
 
 const program = new Command();
@@ -23,6 +24,7 @@ program
 registerInitCommand(program);
 registerProjectCommand(program);
 registerSetProjectCommand(program);
+registerClaudeCommand(program);
 
 // Error handling
 program.exitOverride();

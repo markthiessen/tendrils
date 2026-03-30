@@ -23,46 +23,44 @@ export function registerInitCommand(program: Command): void {
     .description("Initialize a new project or bind current directory to one")
     .argument("[name]", "Project name")
     .action(async (name?: string) => {
-      const opts = { project: name };
       const ctx: OutputContext = {
         json: program.opts().json ?? false,
         quiet: program.opts().quiet ?? false,
       };
 
-      const projectName = opts.project ?? "default";
+      const projectName = name ?? "default";
       const slug = slugify(projectName);
       const existing = loadProjectConfig(slug);
+      const cwd = process.cwd();
 
       if (existing) {
-        // Bind current directory to existing project
-        addBinding(existing, slug, process.cwd());
+        addBinding(existing, slug, cwd);
         saveProjectConfig(slug, existing);
-        writeRepoBinding(process.cwd(), slug);
+        writeRepoBinding(cwd, slug);
         outputSuccess(
           ctx,
-          { project: slug, bound: process.cwd() },
+          { project: slug, bound: cwd },
           `Bound current directory to project '${existing.project.name}'.`,
         );
         return;
       }
 
-      // Create new project
       const config: ProjectConfig = {
         project: {
           name: projectName,
           slug,
           created_at: new Date().toISOString(),
         },
-        bindings: [{ path: process.cwd() }],
+        bindings: [{ path: cwd }],
       };
 
       saveProjectConfig(slug, config);
       initializeDb(slug);
-      writeRepoBinding(process.cwd(), slug);
+      writeRepoBinding(cwd, slug);
 
       outputSuccess(
         ctx,
-        { project: slug, path: getProjectDir(slug), bound: process.cwd() },
+        { project: slug, path: getProjectDir(slug), bound: cwd },
         `Project '${projectName}' created. Database: ${getProjectDir(slug)}/map.db`,
       );
     });
