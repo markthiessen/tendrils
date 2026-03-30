@@ -1,4 +1,5 @@
 import type { Command } from "commander";
+import os from "node:os";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -12,8 +13,15 @@ function getCommandsSource(): string {
   return path.resolve(__dirname, "..", "..", "commands");
 }
 
-function installCommands(targetDir: string): string[] {
-  const commandsTarget = path.join(targetDir, ".claude", "commands");
+function getCommandsTarget(global: boolean): string {
+  if (global) {
+    return path.join(os.homedir(), ".claude", "commands");
+  }
+  return path.join(process.cwd(), ".claude", "commands");
+}
+
+function installCommands(global: boolean): string[] {
+  const commandsTarget = getCommandsTarget(global);
   fs.mkdirSync(commandsTarget, { recursive: true });
 
   const commandsSource = getCommandsSource();
@@ -31,8 +39,8 @@ function installCommands(targetDir: string): string[] {
   return installed;
 }
 
-function removeCommands(targetDir: string): string[] {
-  const commandsDir = path.join(targetDir, ".claude", "commands");
+function removeCommands(global: boolean): string[] {
+  const commandsDir = getCommandsTarget(global);
   const removed: string[] = [];
 
   for (const file of COMMAND_FILES) {
@@ -46,8 +54,8 @@ function removeCommands(targetDir: string): string[] {
   return removed;
 }
 
-function listInstalledCommands(targetDir: string): string[] {
-  const commandsDir = path.join(targetDir, ".claude", "commands");
+function listInstalledCommands(global: boolean): string[] {
+  const commandsDir = getCommandsTarget(global);
   const found: string[] = [];
 
   for (const file of COMMAND_FILES) {
@@ -67,41 +75,44 @@ export function registerClaudeCommand(program: Command): void {
   claude
     .command("install")
     .description(
-      "Install Claude slash commands (/td-discover, /td-plan, /td-status) into this repo",
+      "Install Claude slash commands (/td-discover, /td-plan, /td-status)",
     )
-    .action(() => {
+    .option("-g, --global", "Install to ~/.claude/commands/ (available in all projects)")
+    .action((opts) => {
       const ctx: OutputContext = {
         json: program.opts().json ?? false,
         quiet: program.opts().quiet ?? false,
       };
 
-      const cwd = process.cwd();
-      const installed = installCommands(cwd);
+      const global = opts.global ?? false;
+      const installed = installCommands(global);
+      const target = getCommandsTarget(global);
 
       outputSuccess(
         ctx,
-        { commands: installed, path: path.join(cwd, ".claude", "commands") },
+        { commands: installed, path: target, global },
         installed.length
-          ? `Installed Claude commands to .claude/commands/:\n${installed.map((f) => `  /td-${f.replace(".md", "").replace("td-", "")}`).join("\n")}`
+          ? `Installed Claude commands to ${target}:\n${installed.map((f) => `  /td-${f.replace(".md", "").replace("td-", "")}`).join("\n")}`
           : "No command files found in tendrils package.",
       );
     });
 
   claude
     .command("uninstall")
-    .description("Remove tendrils slash commands from this repo")
-    .action(() => {
+    .description("Remove tendrils slash commands")
+    .option("-g, --global", "Remove from ~/.claude/commands/")
+    .action((opts) => {
       const ctx: OutputContext = {
         json: program.opts().json ?? false,
         quiet: program.opts().quiet ?? false,
       };
 
-      const cwd = process.cwd();
-      const removed = removeCommands(cwd);
+      const global = opts.global ?? false;
+      const removed = removeCommands(global);
 
       outputSuccess(
         ctx,
-        { removed },
+        { removed, global },
         removed.length
           ? `Removed Claude commands: ${removed.join(", ")}`
           : "No tendrils commands found to remove.",
@@ -117,15 +128,21 @@ export function registerClaudeCommand(program: Command): void {
         quiet: program.opts().quiet ?? false,
       };
 
-      const cwd = process.cwd();
-      const installed = listInstalledCommands(cwd);
+      const globalInstalled = listInstalledCommands(true);
+      const localInstalled = listInstalledCommands(false);
+      const formatList = (files: string[]) =>
+        files.map((f) => `  /td-${f.replace(".md", "").replace("td-", "")}`).join("\n");
+
+      const lines: string[] = [];
+      lines.push(`Global (~/.claude/commands/):`);
+      lines.push(globalInstalled.length ? formatList(globalInstalled) : "  (none)");
+      lines.push(`Local (.claude/commands/):`);
+      lines.push(localInstalled.length ? formatList(localInstalled) : "  (none)");
 
       outputSuccess(
         ctx,
-        { installed, available: COMMAND_FILES },
-        installed.length
-          ? `Installed commands:\n${installed.map((f) => `  /td-${f.replace(".md", "").replace("td-", "")}`).join("\n")}`
-          : "No tendrils commands installed. Run 'td claude install' to add them.",
+        { global: globalInstalled, local: localInstalled, available: COMMAND_FILES },
+        lines.join("\n"),
       );
     });
 }
