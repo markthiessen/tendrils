@@ -12,7 +12,7 @@
     "ui/dist"
   ],
   "scripts": {
-    "prepare": "test -f node_modules/.bin/tsc && npm run build || true",
+    "prepare": "test -f node_modules/.bin/tsc && npm run build:all || true",
     "build": "tsc",
     "build:ui": "cd ui && npm install && npm run build",
     "build:all": "npm run build && npm run build:ui",
