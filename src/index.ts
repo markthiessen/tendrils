@@ -7,6 +7,11 @@ import { registerInitCommand } from "./cli/init.js";
 import { registerProjectCommand } from "./cli/project.js";
 import { registerSetProjectCommand } from "./cli/set-project.js";
 import { registerClaudeCommand } from "./cli/claude.js";
+import { registerActivityCommand } from "./cli/activity.js";
+import { registerTaskCommand } from "./cli/task.js";
+import { registerStoryCommand } from "./cli/story.js";
+import { registerBugCommand } from "./cli/bug.js";
+import { registerReleaseCommand } from "./cli/release.js";
 import { closeDb } from "./db/index.js";
 
 const program = new Command();
@@ -25,6 +30,11 @@ registerInitCommand(program);
 registerProjectCommand(program);
 registerSetProjectCommand(program);
 registerClaudeCommand(program);
+registerActivityCommand(program);
+registerTaskCommand(program);
+registerStoryCommand(program);
+registerBugCommand(program);
+registerReleaseCommand(program);
 
 // Error handling
 program.exitOverride();
