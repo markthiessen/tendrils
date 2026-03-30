@@ -42,15 +42,11 @@ async function main(): Promise<void> {
     } else if (
       err instanceof Error &&
       "code" in err &&
-      (err as { code: string }).code === "commander.helpDisplayed"
+      ["commander.help", "commander.helpDisplayed", "commander.version"].includes(
+        (err as { code: string }).code,
+      )
     ) {
-      // Help was displayed, exit cleanly
-    } else if (
-      err instanceof Error &&
-      "code" in err &&
-      (err as { code: string }).code === "commander.version"
-    ) {
-      // Version was displayed, exit cleanly
+      // Help or version was displayed, exit cleanly
     } else {
       console.error("Unexpected error:", err);
       process.exitCode = 1;
