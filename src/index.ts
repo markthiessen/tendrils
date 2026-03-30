@@ -12,6 +12,9 @@ import { registerTaskCommand } from "./cli/task.js";
 import { registerStoryCommand } from "./cli/story.js";
 import { registerBugCommand } from "./cli/bug.js";
 import { registerReleaseCommand } from "./cli/release.js";
+import { registerWorkflowCommands } from "./cli/status.js";
+import { registerLogCommands } from "./cli/log.js";
+import { registerMapCommand } from "./cli/map.js";
 import { closeDb } from "./db/index.js";
 
 const program = new Command();
@@ -35,6 +38,9 @@ registerTaskCommand(program);
 registerStoryCommand(program);
 registerBugCommand(program);
 registerReleaseCommand(program);
+registerWorkflowCommands(program);
+registerLogCommands(program);
+registerMapCommand(program);
 
 // Error handling
 program.exitOverride();
