@@ -6,19 +6,19 @@ Tendrils organizes work as a **story map**: Activities > Tasks > Stories, sliced
 
 ## Install
 
-From git:
+**Latest build** (recommended):
 
 ```bash
-npm install -g git+https://github.com/markthiessen/tendrils.git
+npm install -g https://github.com/markthiessen/tendrils/releases/download/latest/tendrils-latest.tgz
 ```
 
-From a local clone:
+**Local development**:
 
 ```bash
-git clone <repo-url>
+git clone git@github.com:markthiessen/tendrils.git
 cd tendrils
-npm install    # automatically builds via prepare script
-npm link       # makes 'td' available globally
+npm install
+npm link
 ```
 
 ## Quick Start

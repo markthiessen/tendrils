@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - run: npm ci
+
+      - run: npm run build
+
+      - run: npm test
+
+      - name: Determine build number
+        id: buildnum
+        run: |
+          BASE=$(node -p "require('./package.json').version")
+          COUNT=$(git tag --list "v${BASE}-build.*" | wc -l | tr -d ' ')
+          BUILD=$((COUNT + 1))
+          VERSION="${BASE}-build.${BUILD}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Building ${VERSION}"
+
+      - name: Set version
+        run: npm version ${{ steps.buildnum.outputs.version }} --no-git-tag-version
+
+      - name: Pack
+        run: |
+          npm pack
+          cp tendrils-${{ steps.buildnum.outputs.version }}.tgz tendrils-latest.tgz
+
+      - name: Create build release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=${{ steps.buildnum.outputs.version }}
+          git tag "v${VERSION}"
+          git push origin "v${VERSION}"
+          gh release create "v${VERSION}" \
+            --title "v${VERSION}" \
+            --notes "Auto-build from main ($(git rev-parse --short HEAD))" \
+            --prerelease \
+            tendrils-${VERSION}.tgz
+
+      - name: Update latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=${{ steps.buildnum.outputs.version }}
+          gh release delete latest --yes || true
+          git tag -f latest
+          git push origin latest --force
+          gh release create latest \
+            --title "Latest (v${VERSION})" \
+            --notes "Latest build from main. Currently v${VERSION}." \
+            --prerelease \
+            tendrils-latest.tgz
