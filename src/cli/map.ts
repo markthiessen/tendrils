@@ -13,6 +13,7 @@ import {
   formatStoryId,
   formatBugId,
 } from "../model/id.js";
+import { findDependencies } from "../db/dependency.js";
 import { NotFoundError } from "../errors.js";
 import {
   outputSuccess,
@@ -59,6 +60,24 @@ export function registerMapCommand(program: Command): void {
         releaseId: releaseFilter,
       });
 
+      // Build dependency lookup: storyId -> list of depends-on shortIds
+      const depMap = new Map<number, string[]>();
+      for (const s of stories) {
+        const deps = findDependencies(db, s.id);
+        if (deps.length > 0) {
+          const depIds = deps.map((d) => {
+            const depStory = stories.find((st) => st.id === d.depends_on_id);
+            if (depStory) {
+              const depTask = tasks.find((t) => t.id === depStory.task_id);
+              const actId = depTask?.activity_id ?? 0;
+              return formatStoryId(actId, depStory.task_id, depStory.id);
+            }
+            return `S${String(d.depends_on_id).padStart(3, "0")}`;
+          });
+          depMap.set(s.id, depIds);
+        }
+      }
+
       // Build full map data
       const mapData = activities.map((a) => {
         const actTasks = tasks.filter((t) => t.activity_id === a.id);
@@ -77,6 +96,7 @@ export function registerMapCommand(program: Command): void {
                 release_id: s.release_id,
                 claimed_by: s.claimed_by,
                 estimate: s.estimate,
+                depends_on: depMap.get(s.id) ?? [],
               })),
             };
           }),
@@ -127,7 +147,8 @@ export function registerMapCommand(program: Command): void {
           for (const s of t.stories) {
             const status = statusIcon(s.status);
             const claimed = s.claimed_by ? ` @${s.claimed_by}` : "";
-            lines.push(`    ${status} ${s.id} ${s.title}${claimed}`);
+            const deps = s.depends_on.length > 0 ? ` -> ${s.depends_on.join(", ")}` : "";
+            lines.push(`    ${status} ${s.id} ${s.title}${claimed}${deps}`);
           }
         }
         lines.push("");

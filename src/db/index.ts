@@ -1,7 +1,7 @@
 import Database from "better-sqlite3";
 import fs from "node:fs";
 import { getProjectDbPath, getProjectDir } from "../config/index.js";
-import { SCHEMA_V1, SCHEMA_V2, SCHEMA_V3 } from "./schema.js";
+import { SCHEMA_V1, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4 } from "./schema.js";
 
 const _dbs = new Map<string, Database.Database>();
 
@@ -12,6 +12,7 @@ export function getDb(slug: string): Database.Database {
   const db = new Database(dbPath);
   db.pragma("journal_mode = WAL");
   db.pragma("foreign_keys = ON");
+  applyPendingMigrations(db);
   _dbs.set(slug, db);
   return db;
 }
@@ -39,6 +40,17 @@ export function initializeDb(slug: string): void {
   if (version < 3) {
     db.exec(SCHEMA_V3);
   }
+  if (version < 4) {
+    db.exec(SCHEMA_V4);
+  }
+}
+
+function applyPendingMigrations(db: Database.Database): void {
+  const version = getSchemaVersion(db);
+  if (version < 1) return; // Fresh db — initializeDb will handle full setup
+  if (version < 2) db.exec(SCHEMA_V2);
+  if (version < 3) db.exec(SCHEMA_V3);
+  if (version < 4) db.exec(SCHEMA_V4);
 }
 
 function getSchemaVersion(db: Database.Database): number {

@@ -17,6 +17,13 @@ import {
   markStoryItemUndone,
   deleteStoryItem,
 } from "../db/story-item.js";
+import {
+  addDependency,
+  removeDependency,
+  findDependencies,
+  findDependents,
+  wouldCreateCycle,
+} from "../db/dependency.js";
 import { findTaskById } from "../db/task.js";
 import { findReleaseByName } from "../db/release.js";
 import { formatStoryId, formatTaskId } from "../model/id.js";
@@ -145,22 +152,53 @@ export function registerStoryCommand(program: Command): void {
       if (!s) throw new NotFoundError("story", idStr);
       const task = findTaskById(db, s.task_id);
       const shortId = formatStoryId(task?.activity_id ?? 0, s.task_id, s.id);
-      outputSuccess(
-        ctx,
-        { ...s, shortId },
-        renderKeyValue([
-          ["ID", shortId],
-          ["Task", formatTaskId(task?.activity_id ?? 0, s.task_id)],
-          ["Title", s.title],
-          ["Description", s.description || "(none)"],
-          ["Status", s.status],
-          ["Release", s.release_id ? String(s.release_id) : "(none)"],
-          ["Claimed By", s.claimed_by ?? "(none)"],
-          ["Estimate", s.estimate ?? "(none)"],
-          ["Created", s.created_at],
-          ["Updated", s.updated_at],
-        ]),
-      );
+
+      const deps = findDependencies(db, storyId);
+      const dependents = findDependents(db, storyId);
+
+      const depLabels = deps.map((d) => {
+        const ds = findStoryById(db, d.depends_on_id);
+        const dt = ds ? findTaskById(db, ds.task_id) : null;
+        const did = ds ? formatStoryId(dt?.activity_id ?? 0, ds.task_id, ds.id) : "?";
+        const marker = ds?.status === "done" ? "x" : " ";
+        return `[${marker}] ${did} ${ds?.title ?? "?"}`;
+      });
+
+      const blockLabels = dependents.map((d) => {
+        const ds = findStoryById(db, d.story_id);
+        const dt = ds ? findTaskById(db, ds.task_id) : null;
+        const did = ds ? formatStoryId(dt?.activity_id ?? 0, ds.task_id, ds.id) : "?";
+        return `${did} ${ds?.title ?? "?"}`;
+      });
+
+      const kvRows: [string, string][] = [
+        ["ID", shortId],
+        ["Task", formatTaskId(task?.activity_id ?? 0, s.task_id)],
+        ["Title", s.title],
+        ["Description", s.description || "(none)"],
+        ["Status", s.status],
+        ["Release", s.release_id ? String(s.release_id) : "(none)"],
+        ["Claimed By", s.claimed_by ?? "(none)"],
+        ["Estimate", s.estimate ?? "(none)"],
+      ];
+
+      if (depLabels.length > 0) {
+        kvRows.push(["Depends On", depLabels.join("\n")]);
+      }
+      if (blockLabels.length > 0) {
+        kvRows.push(["Blocks", blockLabels.join("\n")]);
+      }
+
+      kvRows.push(["Created", s.created_at], ["Updated", s.updated_at]);
+
+      const data = {
+        ...s,
+        shortId,
+        dependsOn: deps.map((d) => d.depends_on_id),
+        blocks: dependents.map((d) => d.story_id),
+      };
+
+      outputSuccess(ctx, data, renderKeyValue(kvRows));
     });
 
   story
@@ -330,6 +368,125 @@ export function registerStoryCommand(program: Command): void {
           `  ${i.id}. [${i.done ? "x" : " "}] ${i.title}${i.repo ? ` (${i.repo})` : ""}`,
       );
       outputSuccess(ctx, storyItems, lines.join("\n"));
+    });
+
+  // td story depends <story-id> --on <dependency-id>
+  story
+    .command("depends")
+    .description("Add a dependency (story must be done before this one can start)")
+    .argument("<story-id>", "Story that has the dependency")
+    .requiredOption("--on <id>", "Story it depends on")
+    .action((idStr: string, opts: { on: string }) => {
+      const ctx = getCtx(program);
+      const db = resolveDb(program);
+      const storyId = parseStoryNum(idStr);
+      const dependsOnId = parseStoryNum(opts.on);
+
+      if (!findStoryById(db, storyId)) throw new NotFoundError("story", idStr);
+      if (!findStoryById(db, dependsOnId)) throw new NotFoundError("story", opts.on);
+
+      if (wouldCreateCycle(db, storyId, dependsOnId)) {
+        throw new InvalidArgumentError(
+          `Adding this dependency would create a cycle`,
+        );
+      }
+
+      const dep = addDependency(db, storyId, dependsOnId);
+      outputSuccess(
+        ctx,
+        dep,
+        `${idStr} now depends on ${opts.on}`,
+      );
+    });
+
+  // td story undepends <story-id> --on <dependency-id>
+  story
+    .command("undepends")
+    .description("Remove a dependency")
+    .argument("<story-id>", "Story to remove dependency from")
+    .requiredOption("--on <id>", "Story to remove as dependency")
+    .action((idStr: string, opts: { on: string }) => {
+      const ctx = getCtx(program);
+      const db = resolveDb(program);
+      const storyId = parseStoryNum(idStr);
+      const dependsOnId = parseStoryNum(opts.on);
+
+      const removed = removeDependency(db, storyId, dependsOnId);
+      if (!removed) {
+        throw new NotFoundError("dependency", `${idStr} -> ${opts.on}`);
+      }
+      outputSuccess(
+        ctx,
+        { storyId: idStr, dependsOn: opts.on, removed: true },
+        `Removed dependency: ${idStr} no longer depends on ${opts.on}`,
+      );
+    });
+
+  // td story deps <story-id>
+  story
+    .command("deps")
+    .description("List dependencies for a story")
+    .argument("<story-id>", "Story ID")
+    .action((idStr: string) => {
+      const ctx = getCtx(program);
+      const db = resolveDb(program);
+      const storyId = parseStoryNum(idStr);
+      const s = findStoryById(db, storyId);
+      if (!s) throw new NotFoundError("story", idStr);
+
+      const deps = findDependencies(db, storyId);
+      const dependents = findDependents(db, storyId);
+
+      const depsData = deps.map((d) => {
+        const depStory = findStoryById(db, d.depends_on_id);
+        const task = depStory ? findTaskById(db, depStory.task_id) : null;
+        const shortId = depStory
+          ? formatStoryId(task?.activity_id ?? 0, depStory.task_id, depStory.id)
+          : `S${String(d.depends_on_id).padStart(3, "0")}`;
+        return {
+          id: shortId,
+          title: depStory?.title ?? "(unknown)",
+          status: depStory?.status ?? "(unknown)",
+        };
+      });
+
+      const dependentsData = dependents.map((d) => {
+        const depStory = findStoryById(db, d.story_id);
+        const task = depStory ? findTaskById(db, depStory.task_id) : null;
+        const shortId = depStory
+          ? formatStoryId(task?.activity_id ?? 0, depStory.task_id, depStory.id)
+          : `S${String(d.story_id).padStart(3, "0")}`;
+        return {
+          id: shortId,
+          title: depStory?.title ?? "(unknown)",
+          status: depStory?.status ?? "(unknown)",
+        };
+      });
+
+      if (ctx.json) {
+        outputSuccess(ctx, { dependsOn: depsData, blockedBy: dependentsData }, "");
+        return;
+      }
+
+      const lines: string[] = [];
+      if (depsData.length > 0) {
+        lines.push("Depends on:");
+        for (const d of depsData) {
+          const marker = d.status === "done" ? "x" : " ";
+          lines.push(`  [${marker}] ${d.id} ${d.title} (${d.status})`);
+        }
+      } else {
+        lines.push("No dependencies.");
+      }
+
+      if (dependentsData.length > 0) {
+        lines.push("\nBlocks:");
+        for (const d of dependentsData) {
+          lines.push(`  ${d.id} ${d.title} (${d.status})`);
+        }
+      }
+
+      outputSuccess(ctx, { dependsOn: depsData, blocks: dependentsData }, lines.join("\n"));
     });
 }
 

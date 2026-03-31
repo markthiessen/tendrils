@@ -7,6 +7,11 @@ import { findTaskById } from "../db/task.js";
 import { findReleaseByName } from "../db/release.js";
 import { insertLogEntry } from "../db/log.js";
 import {
+  getUnsatisfiedDependencies,
+  findDependents,
+  hasUnsatisfiedDependencies,
+} from "../db/dependency.js";
+import {
   formatStoryId,
   formatBugId,
   parseId,
@@ -94,10 +99,17 @@ export function registerWorkflowCommands(program: Command): void {
       }
 
       // Then stories — prioritize those with incomplete items for this repo
+      // Per D2: silently skip stories with unsatisfied dependencies
       if (showStories) {
         const repoFilter = repo
           ? `AND s.id IN (SELECT story_id FROM story_items WHERE repo = '${repo.replace(/'/g, "''")}' AND done = 0)`
           : "";
+
+        const depFilter = `AND s.id NOT IN (
+          SELECT sd.story_id FROM story_dependencies sd
+          JOIN stories dep ON dep.id = sd.depends_on_id
+          WHERE dep.status != 'done'
+        )`;
 
         let story = db
           .prepare(
@@ -106,6 +118,7 @@ export function registerWorkflowCommands(program: Command): void {
              WHERE s.status = 'ready'
              ${opts.release ? "AND s.release_id = ?" : ""}
              ${repoFilter}
+             ${depFilter}
              ORDER BY
                COALESCE((SELECT r.sort_order FROM releases r WHERE r.id = s.release_id), 999999),
                t.activity_id, t.seq, s.seq
@@ -121,6 +134,7 @@ export function registerWorkflowCommands(program: Command): void {
                JOIN tasks t ON s.task_id = t.id
                WHERE s.status = 'ready'
                ${opts.release ? "AND s.release_id = ?" : ""}
+               ${depFilter}
                ORDER BY
                  COALESCE((SELECT r.sort_order FROM releases r WHERE r.id = s.release_id), 999999),
                  t.activity_id, t.seq, s.seq
@@ -374,6 +388,55 @@ function changeStoryStatus(
 
   const msg = reason ? `Status -> ${newStatus}: ${reason}` : `Status -> ${newStatus}`;
   insertLogEntry(db, "story", storyId, msg, agent, story.status, newStatus);
+
+  // Auto-block: if story moved to ready but has unsatisfied dependencies
+  if (newStatus === "ready") {
+    const unsatisfied = getUnsatisfiedDependencies(db, storyId);
+    if (unsatisfied.length > 0) {
+      const depIds = unsatisfied.map((id) => {
+        const ds = findStoryById(db, id);
+        const dt = ds ? findTaskById(db, ds.task_id) : null;
+        return ds ? formatStoryId(dt?.activity_id ?? 0, ds.task_id, ds.id) : `S${id}`;
+      });
+      const blockReason = `Waiting on dependencies: ${depIds.join(", ")}`;
+
+      db.prepare(
+        `UPDATE stories SET status = 'blocked', blocked_reason = ?,
+         updated_at = datetime('now') WHERE id = ?`,
+      ).run(blockReason, storyId);
+
+      insertLogEntry(db, "story", storyId, `Auto-blocked: ${blockReason}`, agent, "ready", "blocked");
+
+      const blocked = findStoryById(db, storyId)!;
+      const task = findTaskById(db, blocked.task_id);
+      const shortId = formatStoryId(task?.activity_id ?? 0, blocked.task_id, blocked.id);
+      outputSuccess(ctx, { ...blocked, shortId }, `Story ${shortId}: ${story.status} -> ready -> blocked (${blockReason})`);
+      return;
+    }
+  }
+
+  // Auto-unblock: when a story reaches done, unblock dependents whose deps are now all satisfied
+  if (newStatus === "done") {
+    const dependents = findDependents(db, storyId);
+    for (const dep of dependents) {
+      const depStory = findStoryById(db, dep.story_id);
+      if (!depStory || depStory.status !== "blocked") continue;
+      if (hasUnsatisfiedDependencies(db, dep.story_id)) continue;
+
+      db.prepare(
+        `UPDATE stories SET status = 'ready', blocked_reason = NULL,
+         updated_at = datetime('now') WHERE id = ?`,
+      ).run(dep.story_id);
+
+      const dt = findTaskById(db, depStory.task_id);
+      const depId = formatStoryId(dt?.activity_id ?? 0, depStory.task_id, depStory.id);
+      insertLogEntry(db, "story", dep.story_id, `Auto-unblocked: all dependencies satisfied`, agent, "blocked", "ready");
+
+      if (!ctx.quiet) {
+        console.error(`Unblocked ${depId} — all dependencies now done`);
+      }
+    }
+  }
 
   const updated = findStoryById(db, storyId)!;
   const task = findTaskById(db, updated.task_id);
