@@ -1,8 +1,8 @@
-import type Database from "better-sqlite3";
+import type { Database } from "./compat.js";
 import type { StoryDependency } from "../model/types.js";
 
 export function addDependency(
-  db: Database.Database,
+  db: Database,
   storyId: number,
   dependsOnId: number,
 ): StoryDependency {
@@ -18,7 +18,7 @@ export function addDependency(
 }
 
 export function removeDependency(
-  db: Database.Database,
+  db: Database,
   storyId: number,
   dependsOnId: number,
 ): boolean {
@@ -31,7 +31,7 @@ export function removeDependency(
 }
 
 export function findDependencies(
-  db: Database.Database,
+  db: Database,
   storyId: number,
 ): StoryDependency[] {
   return db
@@ -42,7 +42,7 @@ export function findDependencies(
 }
 
 export function findDependents(
-  db: Database.Database,
+  db: Database,
   storyId: number,
 ): StoryDependency[] {
   return db
@@ -53,7 +53,7 @@ export function findDependents(
 }
 
 export function hasUnsatisfiedDependencies(
-  db: Database.Database,
+  db: Database,
   storyId: number,
 ): boolean {
   const row = db
@@ -67,7 +67,7 @@ export function hasUnsatisfiedDependencies(
 }
 
 export function getUnsatisfiedDependencies(
-  db: Database.Database,
+  db: Database,
   storyId: number,
 ): number[] {
   const rows = db
@@ -81,7 +81,7 @@ export function getUnsatisfiedDependencies(
 }
 
 export function wouldCreateCycle(
-  db: Database.Database,
+  db: Database,
   storyId: number,
   dependsOnId: number,
 ): boolean {
@@ -111,7 +111,7 @@ export function wouldCreateCycle(
 }
 
 export function storiesWithUnsatisfiedDeps(
-  db: Database.Database,
+  db: Database,
 ): number[] {
   const rows = db
     .prepare(

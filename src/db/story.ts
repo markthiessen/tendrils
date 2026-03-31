@@ -1,8 +1,8 @@
-import type Database from "better-sqlite3";
+import type { Database } from "./compat.js";
 import type { Story } from "../model/types.js";
 
 export function insertStory(
-  db: Database.Database,
+  db: Database,
   taskId: number,
   title: string,
   description: string,
@@ -32,7 +32,7 @@ export interface StoryFilters {
 }
 
 export function findAllStories(
-  db: Database.Database,
+  db: Database,
   filters?: StoryFilters,
 ): Story[] {
   const where: string[] = [];
@@ -58,7 +58,7 @@ export function findAllStories(
 }
 
 export function findStoryById(
-  db: Database.Database,
+  db: Database,
   id: number,
 ): Story | undefined {
   return db
@@ -67,7 +67,7 @@ export function findStoryById(
 }
 
 export function updateStory(
-  db: Database.Database,
+  db: Database,
   id: number,
   fields: {
     title?: string;
@@ -101,13 +101,13 @@ export function updateStory(
   return findStoryById(db, id);
 }
 
-export function deleteStory(db: Database.Database, id: number): boolean {
+export function deleteStory(db: Database, id: number): boolean {
   const result = db.prepare("DELETE FROM stories WHERE id = ?").run(id);
   return result.changes > 0;
 }
 
 export function moveStory(
-  db: Database.Database,
+  db: Database,
   id: number,
   newTaskId: number,
 ): Story | undefined {
@@ -125,7 +125,7 @@ export function moveStory(
 }
 
 export function reorderStory(
-  db: Database.Database,
+  db: Database,
   id: number,
   afterId: number | null,
 ): void {

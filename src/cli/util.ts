@@ -2,7 +2,7 @@ import path from "node:path";
 import { createInterface } from "node:readline";
 import { execSync } from "node:child_process";
 import type { Command } from "commander";
-import type Database from "better-sqlite3";
+import type { Database } from "../db/compat.js";
 import { resolveWorkspace } from "../config/binding.js";
 import { getDb } from "../db/index.js";
 import type { OutputContext } from "../output/index.js";
@@ -32,7 +32,7 @@ export function getCtx(program: Command): OutputContext {
   };
 }
 
-export function resolveDb(program: Command): Database.Database {
+export function resolveDb(program: Command): Database {
   const resolved = resolveWorkspace(program.opts().workspace);
   return getDb(resolved.name);
 }

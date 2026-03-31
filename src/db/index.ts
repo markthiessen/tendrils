@@ -1,32 +1,30 @@
-import Database from "better-sqlite3";
 import fs from "node:fs";
 import path from "node:path";
 import { getWorkspaceDbPath, getWorkspaceDir, getRepoDecisionsDbPath } from "../config/index.js";
 import { SCHEMA_V1, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4, SCHEMA_V5, SCHEMA_V6, SCHEMA_V7, DECISIONS_SCHEMA_V1 } from "./schema.js";
+import { openDatabase, type Database } from "./compat.js";
 
-const _dbs = new Map<string, Database.Database>();
-const _decisionsDbs = new Map<string, Database.Database>();
+export type { Database } from "./compat.js";
 
-export function getDb(workspace: string): Database.Database {
+const _dbs = new Map<string, Database>();
+const _decisionsDbs = new Map<string, Database>();
+
+export function getDb(workspace: string): Database {
   const existing = _dbs.get(workspace);
   if (existing) return existing;
   const dbPath = getWorkspaceDbPath(workspace);
-  const db = new Database(dbPath);
-  db.pragma("journal_mode = WAL");
-  db.pragma("foreign_keys = ON");
+  const db = openDatabase(dbPath);
   applyPendingMigrations(db);
   _dbs.set(workspace, db);
   return db;
 }
 
-export function getDecisionsDb(repoRoot: string): Database.Database {
+export function getDecisionsDb(repoRoot: string): Database {
   const existing = _decisionsDbs.get(repoRoot);
   if (existing) return existing;
   const dbPath = getRepoDecisionsDbPath(repoRoot);
   fs.mkdirSync(path.dirname(dbPath), { recursive: true });
-  const db = new Database(dbPath);
-  db.pragma("journal_mode = WAL");
-  db.pragma("foreign_keys = ON");
+  const db = openDatabase(dbPath);
   const version = getSchemaVersion(db);
   if (version < 1) {
     db.exec(DECISIONS_SCHEMA_V1);
@@ -76,7 +74,7 @@ export function initializeDb(workspace: string): void {
   }
 }
 
-function applyPendingMigrations(db: Database.Database): void {
+function applyPendingMigrations(db: Database): void {
   const version = getSchemaVersion(db);
   if (version < 1) return; // Fresh db — initializeDb will handle full setup
   if (version < 2) db.exec(SCHEMA_V2);
@@ -87,7 +85,7 @@ function applyPendingMigrations(db: Database.Database): void {
   if (version < 7) db.exec(SCHEMA_V7);
 }
 
-function getSchemaVersion(db: Database.Database): number {
+function getSchemaVersion(db: Database): number {
   try {
     const row = db
       .prepare("SELECT MAX(version) as version FROM schema_version")

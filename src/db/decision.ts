@@ -1,8 +1,8 @@
-import type Database from "better-sqlite3";
+import type { Database } from "./compat.js";
 import type { Decision } from "../model/types.js";
 
 export function insertDecision(
-  db: Database.Database,
+  db: Database,
   title: string,
   opts?: {
     contextType?: "story";
@@ -31,7 +31,7 @@ export function insertDecision(
 }
 
 export function findAllDecisions(
-  db: Database.Database,
+  db: Database,
   opts?: { tag?: string },
 ): Decision[] {
   if (opts?.tag) {
@@ -47,7 +47,7 @@ export function findAllDecisions(
 }
 
 export function findDecisionById(
-  db: Database.Database,
+  db: Database,
   id: number,
 ): Decision | undefined {
   return db
@@ -56,7 +56,7 @@ export function findDecisionById(
 }
 
 export function deleteDecision(
-  db: Database.Database,
+  db: Database,
   id: number,
 ): boolean {
   const result = db.prepare("DELETE FROM decisions WHERE id = ?").run(id);

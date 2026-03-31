@@ -1,8 +1,8 @@
-import type Database from "better-sqlite3";
+import type { Database } from "./compat.js";
 import type { Repo } from "../model/types.js";
 
 export function upsertRepo(
-  db: Database.Database,
+  db: Database,
   repoPath: string,
   name: string,
   role?: string,
@@ -20,14 +20,14 @@ export function upsertRepo(
     .get(repoPath) as Repo;
 }
 
-export function findAllRepos(db: Database.Database): Repo[] {
+export function findAllRepos(db: Database): Repo[] {
   return db
     .prepare("SELECT * FROM repos ORDER BY name")
     .all() as Repo[];
 }
 
 export function findRepoByPath(
-  db: Database.Database,
+  db: Database,
   repoPath: string,
 ): Repo | undefined {
   return db
@@ -35,7 +35,7 @@ export function findRepoByPath(
     .get(repoPath) as Repo | undefined;
 }
 
-export function deleteRepo(db: Database.Database, id: number): boolean {
+export function deleteRepo(db: Database, id: number): boolean {
   const result = db.prepare("DELETE FROM repos WHERE id = ?").run(id);
   return result.changes > 0;
 }

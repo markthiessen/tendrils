@@ -1,8 +1,8 @@
-import type Database from "better-sqlite3";
+import type { Database } from "./compat.js";
 import type { Task } from "../model/types.js";
 
 export function insertTask(
-  db: Database.Database,
+  db: Database,
   activityId: number,
   title: string,
   description: string,
@@ -24,7 +24,7 @@ export function insertTask(
 }
 
 export function findAllTasks(
-  db: Database.Database,
+  db: Database,
   activityId?: number,
 ): Task[] {
   if (activityId !== undefined) {
@@ -40,7 +40,7 @@ export function findAllTasks(
 }
 
 export function findTaskById(
-  db: Database.Database,
+  db: Database,
   id: number,
 ): Task | undefined {
   return db
@@ -49,7 +49,7 @@ export function findTaskById(
 }
 
 export function updateTask(
-  db: Database.Database,
+  db: Database,
   id: number,
   fields: { title?: string; description?: string },
 ): Task | undefined {
@@ -75,13 +75,13 @@ export function updateTask(
   return findTaskById(db, id);
 }
 
-export function deleteTask(db: Database.Database, id: number): boolean {
+export function deleteTask(db: Database, id: number): boolean {
   const result = db.prepare("DELETE FROM tasks WHERE id = ?").run(id);
   return result.changes > 0;
 }
 
 export function reorderTask(
-  db: Database.Database,
+  db: Database,
   id: number,
   afterId: number | null,
 ): void {

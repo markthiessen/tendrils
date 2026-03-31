@@ -1,5 +1,5 @@
 ---
-description: Analyze codebase and record decisions that document what exists
+description: Analyze codebase, record decisions, and update architecture diagram
 argument-hint: [focus-area]
 ---
 
@@ -77,11 +77,44 @@ td decide "Hierarchical IDs: A01.T01.S001 format, zero-padded" --tag convention
 td decide "All CLI commands support --json flag for machine output" --tag convention,cli
 ```
 
-### Step 5: Summary
+### Step 5: Update the architecture diagram
+
+Generate or update a Mermaid diagram that captures the system's high-level architecture. This diagram is workspace-level (shared across repos), so it should show the full system, not just the current repo.
+
+First check the current diagram:
+```bash
+td arch --json
+```
+
+If no diagram exists, create one. If one exists, update it with any new components or connections you've discovered. The diagram should show:
+
+- Major components/services (frontend, backend, database, external services)
+- How they connect (HTTP, SSE, file system, etc.)
+- Key technology labels on nodes
+
+Use Mermaid `graph` or `flowchart` syntax. Keep it readable — show the **important** structural relationships, not every file.
+
+```bash
+td arch set "graph TD
+  CLI[CLI - td]-->|reads/writes|DB[(SQLite)]
+  CLI-->|serves|Server[Fastify Server]
+  Server-->|SSE|UI[React SPA]
+  Server-->|reads/writes|DB
+  UI-->|HTTP API|Server"
+```
+
+Add notes to key nodes to capture non-obvious details:
+```bash
+td arch note DB "WAL mode, separate decisions.db per repo"
+td arch note Server "Serves static UI build + REST API on same port"
+```
+
+### Step 6: Summary
 
 After analyzing the codebase, run:
 ```bash
 td decisions
+td arch
 ```
 
 Present a summary to the user:
@@ -89,11 +122,12 @@ Present a summary to the user:
   - Feature decisions (what's built)
   - Architectural decisions (technical choices)
   - Convention decisions (patterns to follow)
+- Whether the architecture diagram was **created** or **updated**
 - Areas of the codebase that were covered
 
 ## Guidelines
 
-- **Discover only records decisions. It does not create stories or modify the story map.** Planning is done with `/td-plan`.
+- **Discover records decisions and updates the architecture diagram. It does not create stories or modify the story map.** Planning is done with `/td-plan`.
 - Use tags consistently: `feature` for capabilities, `stack` for technology choices, `convention` for patterns, `security` for auth/access concerns, plus a domain tag where relevant.
 - When describing features, think in vertical slices — describe the full user-facing outcome, not individual code layers.
 - Check existing decisions before adding. Avoid duplicates, especially across multi-repo runs.

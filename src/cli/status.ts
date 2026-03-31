@@ -149,7 +149,7 @@ export function registerWorkflowCommands(program: Command): void {
  * done, and move them back to in-progress automatically.
  */
 export function autoUnblockStories(
-  db: import("better-sqlite3").Database,
+  db: import("../db/compat.js").Database,
   repo: string,
 ): void {
   db.transaction(() => {
@@ -186,7 +186,7 @@ export function autoUnblockStories(
 
 export function claimStory(
   ctx: OutputContext,
-  db: import("better-sqlite3").Database,
+  db: import("../db/compat.js").Database,
   storyId: number,
   agent?: string,
 ): void {
@@ -225,7 +225,7 @@ export function claimStory(
 
 export function unclaimStory(
   ctx: OutputContext,
-  db: import("better-sqlite3").Database,
+  db: import("../db/compat.js").Database,
   storyId: number,
 ): void {
   const story = findStoryById(db, storyId);
@@ -250,7 +250,7 @@ export function unclaimStory(
 
 export function changeStoryStatus(
   ctx: OutputContext,
-  db: import("better-sqlite3").Database,
+  db: import("../db/compat.js").Database,
   storyId: number,
   newStatus: string,
   agent?: string,

@@ -1,4 +1,4 @@
-import type Database from "better-sqlite3";
+import type { Database } from "../db/compat.js";
 import { getDb, getDecisionsDb, initializeDb } from "../db/index.js";
 import { loadWorkspaceConfig } from "../config/index.js";
 import { findAllRepos } from "../db/repo.js";
@@ -8,8 +8,8 @@ import type { Repo } from "../model/types.js";
 export interface ServerContext {
   name: string;
   repoRoot: string;
-  readonly db: Database.Database;
-  readonly decisionsDb: Database.Database;
+  readonly db: Database;
+  readonly decisionsDb: Database;
   switchWorkspace(name: string): void;
   listWorkspaces(): { name: string; active: boolean }[];
   switchRepo(repoRoot: string): void;

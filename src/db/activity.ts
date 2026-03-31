@@ -1,8 +1,8 @@
-import type Database from "better-sqlite3";
+import type { Database } from "./compat.js";
 import type { Activity } from "../model/types.js";
 
 export function insertActivity(
-  db: Database.Database,
+  db: Database,
   title: string,
   description: string,
 ): Activity {
@@ -20,14 +20,14 @@ export function insertActivity(
   return findActivityById(db, result.lastInsertRowid as number)!;
 }
 
-export function findAllActivities(db: Database.Database): Activity[] {
+export function findAllActivities(db: Database): Activity[] {
   return db
     .prepare("SELECT * FROM activities ORDER BY seq")
     .all() as Activity[];
 }
 
 export function findActivityById(
-  db: Database.Database,
+  db: Database,
   id: number,
 ): Activity | undefined {
   return db
@@ -36,7 +36,7 @@ export function findActivityById(
 }
 
 export function updateActivity(
-  db: Database.Database,
+  db: Database,
   id: number,
   fields: { title?: string; description?: string },
 ): Activity | undefined {
@@ -62,13 +62,13 @@ export function updateActivity(
   return findActivityById(db, id);
 }
 
-export function deleteActivity(db: Database.Database, id: number): boolean {
+export function deleteActivity(db: Database, id: number): boolean {
   const result = db.prepare("DELETE FROM activities WHERE id = ?").run(id);
   return result.changes > 0;
 }
 
 export function reorderActivity(
-  db: Database.Database,
+  db: Database,
   id: number,
   afterId: number | null,
 ): void {
