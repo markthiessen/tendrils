@@ -126,15 +126,18 @@ function showWorkspaceInfo(ctx: OutputContext, name: string): void {
     throw new NotFoundError("workspace", name);
   }
 
+  const wsName = config.workspace?.name ?? name;
+  const wsCreated = config.workspace?.created_at ?? "";
+
   outputSuccess(
     ctx,
     {
-      name: config.workspace.name,
-      created_at: config.workspace.created_at,
+      name: wsName,
+      created_at: wsCreated,
       bindings: config.bindings ?? [],
     },
     renderKeyValue([
-      ["Name", config.workspace.name],
+      ["Name", wsName],
       ["Created", config.workspace.created_at],
       [
         "Bindings",
