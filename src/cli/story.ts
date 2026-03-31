@@ -10,6 +10,13 @@ import {
   moveStory,
   reorderStory,
 } from "../db/story.js";
+import {
+  insertStoryItem,
+  findStoryItems,
+  markStoryItemDone,
+  markStoryItemUndone,
+  deleteStoryItem,
+} from "../db/story-item.js";
 import { findTaskById } from "../db/task.js";
 import { findReleaseByName } from "../db/release.js";
 import { formatStoryId, formatTaskId } from "../model/id.js";
@@ -239,6 +246,90 @@ export function registerStoryCommand(program: Command): void {
       const afterNum = opts.first ? null : opts.after ? parseStoryNum(opts.after) : null;
       reorderStory(db, storyId, afterNum);
       outputSuccess(ctx, { id: idStr, reordered: true }, `Reordered story ${idStr}.`);
+    });
+
+  // td story items <story-id> add|done|undo|rm|list
+  const items = story
+    .command("items")
+    .description("Manage checklist items on a story");
+
+  items
+    .command("add")
+    .argument("<story-id>", "Story ID (e.g. A01.T01.S001)")
+    .argument("<title>", "Item description")
+    .option("-r, --repo <name>", "Repo this item belongs to")
+    .action((idStr: string, title: string, opts: { repo?: string }) => {
+      const ctx = getCtx(program);
+      const db = resolveDb(program);
+      const storyId = parseStoryNum(idStr);
+      if (!findStoryById(db, storyId)) throw new NotFoundError("story", idStr);
+      const item = insertStoryItem(db, storyId, title, opts.repo);
+      outputSuccess(
+        ctx,
+        item,
+        `  ${item.id}. [ ] ${item.title}${item.repo ? ` (${item.repo})` : ""}`,
+      );
+    });
+
+  items
+    .command("done")
+    .argument("<item-id>", "Item ID")
+    .action((idStr: string) => {
+      const ctx = getCtx(program);
+      const db = resolveDb(program);
+      const item = markStoryItemDone(db, Number(idStr));
+      if (!item) throw new NotFoundError("story item", idStr);
+      outputSuccess(ctx, item, `  ${item.id}. [x] ${item.title}`);
+    });
+
+  items
+    .command("undo")
+    .argument("<item-id>", "Item ID")
+    .action((idStr: string) => {
+      const ctx = getCtx(program);
+      const db = resolveDb(program);
+      const item = markStoryItemUndone(db, Number(idStr));
+      if (!item) throw new NotFoundError("story item", idStr);
+      outputSuccess(ctx, item, `  ${item.id}. [ ] ${item.title}`);
+    });
+
+  items
+    .command("rm")
+    .argument("<item-id>", "Item ID")
+    .action((idStr: string) => {
+      const ctx = getCtx(program);
+      const db = resolveDb(program);
+      const id = Number(idStr);
+      const deleted = deleteStoryItem(db, id);
+      if (!deleted) throw new NotFoundError("story item", idStr);
+      outputSuccess(ctx, { id, deleted: true }, `Removed item ${id}.`);
+    });
+
+  items
+    .command("list")
+    .argument("<story-id>", "Story ID (e.g. A01.T01.S001)")
+    .action((idStr: string) => {
+      const ctx = getCtx(program);
+      const db = resolveDb(program);
+      const storyId = parseStoryNum(idStr);
+      if (!findStoryById(db, storyId)) throw new NotFoundError("story", idStr);
+      const storyItems = findStoryItems(db, storyId);
+
+      if (ctx.json) {
+        outputSuccess(ctx, storyItems, "");
+        return;
+      }
+
+      if (storyItems.length === 0) {
+        outputSuccess(ctx, [], "No items on this story.");
+        return;
+      }
+
+      const lines = storyItems.map(
+        (i) =>
+          `  ${i.id}. [${i.done ? "x" : " "}] ${i.title}${i.repo ? ` (${i.repo})` : ""}`,
+      );
+      outputSuccess(ctx, storyItems, lines.join("\n"));
     });
 }
 

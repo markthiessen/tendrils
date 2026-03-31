@@ -1,4 +1,4 @@
-import type { StoryData, ReleaseData } from "../hooks/useStoryMap";
+import type { StoryData, StoryItemData, ReleaseData } from "../hooks/useStoryMap";
 import { StatusBadge } from "./StatusBadge";
 import { EditableText } from "./EditableText";
 import { put, del, post } from "../api/client";
@@ -40,6 +40,11 @@ export function StoryCard({ story, releases }: Props) {
 
   const handleDelete = async () => {
     await del(`/api/stories/${story.id}`);
+  };
+
+  const handleItemToggle = async (item: StoryItemData) => {
+    const action = item.done ? "undo" : "done";
+    await post(`/api/stories/${story.id}/items/${item.id}/${action}`, {});
   };
 
   return (
@@ -89,6 +94,21 @@ export function StoryCard({ story, releases }: Props) {
           <span className="story-estimate">{story.estimate}</span>
         )}
       </div>
+      {story.items.length > 0 && (
+        <div className="story-items">
+          {story.items.map((item) => (
+            <label key={item.id} className={`story-item${item.done ? " story-item--done" : ""}`}>
+              <input
+                type="checkbox"
+                checked={!!item.done}
+                onChange={() => handleItemToggle(item)}
+              />
+              <span className="story-item-title">{item.title}</span>
+              {item.repo && <span className="story-item-repo">{item.repo}</span>}
+            </label>
+          ))}
+        </div>
+      )}
       <div className="story-actions">
         {story.status === "backlog" && (
           <button onClick={() => handleStatusChange("ready")}>Ready</button>

@@ -90,6 +90,25 @@ export interface Release {
   updated_at: string;
 }
 
+export interface StoryItem {
+  id: number;
+  story_id: number;
+  title: string;
+  repo: string | null;
+  done: number;
+  created_at: string;
+}
+
+export interface Decision {
+  id: number;
+  title: string;
+  context_type: "story" | "bug" | null;
+  context_id: number | null;
+  tags: string;
+  agent: string | null;
+  created_at: string;
+}
+
 export interface WorkLogEntry {
   id: number;
   entity_type: "story" | "bug";

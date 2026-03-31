@@ -1,19 +1,20 @@
 import type { FastifyInstance } from "fastify";
-import type Database from "better-sqlite3";
 import { findAllActivities } from "../../db/activity.js";
 import { findAllTasks } from "../../db/task.js";
 import { findAllStories } from "../../db/story.js";
+import { findStoryItems } from "../../db/story-item.js";
 import { findAllBugs } from "../../db/bug.js";
 import { findAllReleases } from "../../db/release.js";
 import { formatActivityId, formatTaskId, formatStoryId, formatBugId } from "../../model/id.js";
+import type { ServerContext } from "../context.js";
 
-export function registerMapRoutes(app: FastifyInstance, db: Database.Database) {
+export function registerMapRoutes(app: FastifyInstance, ctx: ServerContext) {
   app.get("/api/map", () => {
-    const activities = findAllActivities(db);
-    const tasks = findAllTasks(db);
-    const stories = findAllStories(db);
-    const bugs = findAllBugs(db);
-    const releases = findAllReleases(db);
+    const activities = findAllActivities(ctx.db);
+    const tasks = findAllTasks(ctx.db);
+    const stories = findAllStories(ctx.db);
+    const bugs = findAllBugs(ctx.db);
+    const releases = findAllReleases(ctx.db);
 
     const mapData = activities.map((a) => {
       const actTasks = tasks.filter((t) => t.activity_id === a.id);
@@ -28,6 +29,7 @@ export function registerMapRoutes(app: FastifyInstance, db: Database.Database) {
             stories: taskStories.map((s) => ({
               ...s,
               shortId: formatStoryId(a.id, t.id, s.id),
+              items: findStoryItems(ctx.db, s.id),
             })),
           };
         }),
@@ -45,10 +47,10 @@ export function registerMapRoutes(app: FastifyInstance, db: Database.Database) {
   });
 
   app.get("/api/stats", () => {
-    const activities = findAllActivities(db);
-    const tasks = findAllTasks(db);
-    const stories = findAllStories(db);
-    const bugs = findAllBugs(db);
+    const activities = findAllActivities(ctx.db);
+    const tasks = findAllTasks(ctx.db);
+    const stories = findAllStories(ctx.db);
+    const bugs = findAllBugs(ctx.db);
 
     const storyCounts: Record<string, number> = {};
     for (const s of stories) storyCounts[s.status] = (storyCounts[s.status] ?? 0) + 1;

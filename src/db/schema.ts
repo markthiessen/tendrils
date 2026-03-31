@@ -96,3 +96,34 @@ CREATE INDEX IF NOT EXISTS idx_work_log_entity ON work_log(entity_type, entity_i
 
 INSERT OR IGNORE INTO schema_version (version) VALUES (1);
 `;
+
+export const SCHEMA_V2 = `
+CREATE TABLE IF NOT EXISTS decisions (
+  id INTEGER PRIMARY KEY,
+  title TEXT NOT NULL,
+  context_type TEXT CHECK(context_type IN ('story','bug')),
+  context_id INTEGER,
+  tags TEXT NOT NULL DEFAULT '',
+  agent TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_decisions_tags ON decisions(tags);
+
+INSERT OR IGNORE INTO schema_version (version) VALUES (2);
+`;
+
+export const SCHEMA_V3 = `
+CREATE TABLE IF NOT EXISTS story_items (
+  id INTEGER PRIMARY KEY,
+  story_id INTEGER NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  repo TEXT,
+  done INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_story_items_story ON story_items(story_id);
+
+INSERT OR IGNORE INTO schema_version (version) VALUES (3);
+`;

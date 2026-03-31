@@ -11,6 +11,7 @@ export interface GlobalConfig {
 
 export interface ProjectBinding {
   path: string;
+  repo?: string;
 }
 
 export interface ProjectConfig {
@@ -24,6 +25,7 @@ export interface ProjectConfig {
 
 export interface RepoBinding {
   project: string;
+  repo?: string;
 }
 
 const DEFAULT_GLOBAL_CONFIG: GlobalConfig = {

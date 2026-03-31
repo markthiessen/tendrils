@@ -46,17 +46,18 @@ export function registerWorkflowCommands(program: Command): void {
     .option("-r, --release <name>", "Filter by release")
     .option("--bugs", "Only show bugs")
     .option("--stories", "Only show stories")
-    .action((opts: { release?: string; bugs?: boolean; stories?: boolean }) => {
+    .option("--repo <name>", "Prioritize stories with incomplete items for this repo (auto-detected from binding)")
+    .action((opts: { release?: string; bugs?: boolean; stories?: boolean; repo?: string }) => {
       const ctx = getCtx(program);
-      const db = resolveDb(program);
+      const resolved = resolveProject(program.opts().project);
+      const db = getDb(resolved.slug);
+      const repo = opts.repo ?? resolved.repo;
 
-      let releaseFilter = "";
       const params: unknown[] = [];
 
       if (opts.release) {
         const rel = findReleaseByName(db, opts.release);
         if (!rel) throw new NotFoundError("release", opts.release);
-        releaseFilter = "AND release_id = ?";
         params.push(rel.id);
       }
 
@@ -87,20 +88,41 @@ export function registerWorkflowCommands(program: Command): void {
         }
       }
 
-      // Then stories
+      // Then stories — prioritize those with incomplete items for this repo
       if (showStories) {
-        const story = db
+        const repoFilter = repo
+          ? `AND s.id IN (SELECT story_id FROM story_items WHERE repo = '${repo.replace(/'/g, "''")}' AND done = 0)`
+          : "";
+
+        let story = db
           .prepare(
             `SELECT s.*, t.activity_id FROM stories s
              JOIN tasks t ON s.task_id = t.id
              WHERE s.status = 'ready'
              ${opts.release ? "AND s.release_id = ?" : ""}
+             ${repoFilter}
              ORDER BY
                COALESCE((SELECT r.sort_order FROM releases r WHERE r.id = s.release_id), 999999),
                t.activity_id, t.seq, s.seq
              LIMIT 1`,
           )
           .get(...(opts.release ? params : [])) as any;
+
+        // Fall back to any ready story if no repo-specific matches
+        if (!story && repo) {
+          story = db
+            .prepare(
+              `SELECT s.*, t.activity_id FROM stories s
+               JOIN tasks t ON s.task_id = t.id
+               WHERE s.status = 'ready'
+               ${opts.release ? "AND s.release_id = ?" : ""}
+               ORDER BY
+                 COALESCE((SELECT r.sort_order FROM releases r WHERE r.id = s.release_id), 999999),
+                 t.activity_id, t.seq, s.seq
+               LIMIT 1`,
+            )
+            .get(...(opts.release ? params : [])) as any;
+        }
 
         if (story) {
           const shortId = formatStoryId(story.activity_id, story.task_id, story.id);
