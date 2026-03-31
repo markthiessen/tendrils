@@ -1,6 +1,4 @@
 import type { Command } from "commander";
-import { resolveProject } from "../config/binding.js";
-import { getDb } from "../db/index.js";
 import {
   insertActivity,
   findAllActivities,
@@ -15,20 +13,8 @@ import {
   outputSuccess,
   renderTable,
   renderKeyValue,
-  type OutputContext,
 } from "../output/index.js";
-
-function getCtx(program: Command): OutputContext {
-  return {
-    json: program.opts().json ?? false,
-    quiet: program.opts().quiet ?? false,
-  };
-}
-
-function resolveDb(program: Command) {
-  const resolved = resolveProject(program.opts().project);
-  return getDb(resolved.slug);
-}
+import { getCtx, resolveDb } from "./util.js";
 
 export function registerActivityCommand(program: Command): void {
   const activity = program

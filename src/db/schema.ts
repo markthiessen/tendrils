@@ -143,3 +143,69 @@ CREATE INDEX IF NOT EXISTS idx_story_deps_depends ON story_dependencies(depends_
 
 INSERT OR IGNORE INTO schema_version (version) VALUES (4);
 `;
+
+export const SCHEMA_V5 = `
+DROP TABLE IF EXISTS bugs;
+DROP TABLE IF EXISTS releases;
+DROP INDEX IF EXISTS idx_stories_release;
+DROP INDEX IF EXISTS idx_bugs_status;
+DROP INDEX IF EXISTS idx_bugs_severity;
+ALTER TABLE stories DROP COLUMN release_id;
+
+INSERT OR IGNORE INTO schema_version (version) VALUES (5);
+`;
+
+export const SCHEMA_V6 = `
+CREATE TABLE IF NOT EXISTS repos (
+  id INTEGER PRIMARY KEY,
+  path TEXT NOT NULL UNIQUE,
+  role TEXT,
+  name TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+INSERT OR IGNORE INTO schema_version (version) VALUES (6);
+`;
+
+export const SCHEMA_V7 = `
+CREATE TABLE IF NOT EXISTS architecture (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  mermaid_source TEXT NOT NULL DEFAULT '',
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS architecture_notes (
+  id INTEGER PRIMARY KEY,
+  node_id TEXT NOT NULL UNIQUE,
+  note_type TEXT NOT NULL CHECK(note_type IN ('node','edge')),
+  content TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+INSERT OR IGNORE INTO schema_version (version) VALUES (7);
+`;
+
+// Per-repo decisions database schema (lives at ~/.tendrils/repos/<hash>/decisions.db)
+export const DECISIONS_SCHEMA_V1 = `
+PRAGMA foreign_keys = ON;
+
+CREATE TABLE IF NOT EXISTS schema_version (
+  version INTEGER PRIMARY KEY,
+  applied_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS decisions (
+  id INTEGER PRIMARY KEY,
+  title TEXT NOT NULL,
+  context_type TEXT CHECK(context_type IN ('story')),
+  context_id INTEGER,
+  tags TEXT NOT NULL DEFAULT '',
+  agent TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_decisions_tags ON decisions(tags);
+
+INSERT OR IGNORE INTO schema_version (version) VALUES (1);
+`;

@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { resolveProject } from "../config/binding.js";
+import { resolveWorkspace } from "../config/binding.js";
 import { initializeDb } from "../db/index.js";
 import { createServer } from "../server/index.js";
 import net from "node:net";
@@ -29,13 +29,13 @@ export function registerUiCommand(program: Command): void {
     .description("Launch the story map web UI")
     .option("--port <number>", "Port number (default: auto-detect)", "0")
     .action(async (opts: { port: string }) => {
-      const resolved = resolveProject(program.opts().project);
-      initializeDb(resolved.slug);
+      const resolved = resolveWorkspace(program.opts().workspace);
+      initializeDb(resolved.name);
 
       const preferred = Number(opts.port) || 24242;
       const port = await findOpenPort(preferred);
 
-      await createServer(resolved.slug, resolved.name, port);
+      await createServer(resolved.name, port);
 
       const url = `http://localhost:${port}`;
       console.log(`Tendrils UI for '${resolved.name}' running at ${url}`);

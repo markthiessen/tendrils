@@ -24,14 +24,14 @@ export class ConflictError extends TendrilsError {
   }
 }
 
-export class NoProjectError extends TendrilsError {
+export class NoWorkspaceError extends TendrilsError {
   constructor(message?: string) {
     super(
-      message ?? "No project bound. Run 'td init' or 'td set-project <name>'.",
-      "NO_PROJECT",
+      message ?? "No workspace found. Run 'td init <name>' to create one.",
+      "NO_WORKSPACE",
       5,
     );
-    this.name = "NoProjectError";
+    this.name = "NoWorkspaceError";
   }
 }
 

@@ -5,7 +5,7 @@ export function insertDecision(
   db: Database.Database,
   title: string,
   opts?: {
-    contextType?: "story" | "bug";
+    contextType?: "story";
     contextId?: number;
     tags?: string[];
     agent?: string;

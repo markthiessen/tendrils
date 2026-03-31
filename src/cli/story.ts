@@ -1,6 +1,5 @@
 import type { Command } from "commander";
-import { resolveProject } from "../config/binding.js";
-import { getDb } from "../db/index.js";
+import { resolveWorkspace } from "../config/binding.js";
 import {
   insertStory,
   findAllStories,
@@ -25,27 +24,14 @@ import {
   wouldCreateCycle,
 } from "../db/dependency.js";
 import { findTaskById } from "../db/task.js";
-import { findReleaseByName } from "../db/release.js";
 import { formatStoryId, formatTaskId } from "../model/id.js";
 import { NotFoundError, InvalidArgumentError } from "../errors.js";
 import {
   outputSuccess,
   renderTable,
   renderKeyValue,
-  type OutputContext,
 } from "../output/index.js";
-
-function getCtx(program: Command): OutputContext {
-  return {
-    json: program.opts().json ?? false,
-    quiet: program.opts().quiet ?? false,
-  };
-}
-
-function resolveDb(program: Command) {
-  const resolved = resolveProject(program.opts().project);
-  return getDb(resolved.slug);
-}
+import { getCtx, resolveDb } from "./util.js";
 
 export function registerStoryCommand(program: Command): void {
   const story = program
@@ -58,13 +44,12 @@ export function registerStoryCommand(program: Command): void {
     .argument("<task-id>", "Parent task ID (e.g. A01.T01)")
     .argument("<title>", "Story title")
     .option("-d, --desc <text>", "Description", "")
-    .option("-r, --release <name>", "Assign to release")
     .option("-e, --estimate <size>", "Estimate (XS, S, M, L, XL)")
     .action(
       (
         taskIdStr: string,
         title: string,
-        opts: { desc: string; release?: string; estimate?: string },
+        opts: { desc: string; estimate?: string },
       ) => {
         const ctx = getCtx(program);
         const db = resolveDb(program);
@@ -72,15 +57,7 @@ export function registerStoryCommand(program: Command): void {
         const task = findTaskById(db, taskId);
         if (!task) throw new NotFoundError("task", taskIdStr);
 
-        let releaseId: number | undefined;
-        if (opts.release) {
-          const rel = findReleaseByName(db, opts.release);
-          if (!rel) throw new NotFoundError("release", opts.release);
-          releaseId = rel.id;
-        }
-
         const s = insertStory(db, taskId, title, opts.desc, {
-          releaseId,
           estimate: opts.estimate,
         });
         const id = formatStoryId(task.activity_id, taskId, s.id);
@@ -91,27 +68,18 @@ export function registerStoryCommand(program: Command): void {
   story
     .command("list")
     .argument("[task-id]", "Filter by task (e.g. A01.T01)")
-    .option("-r, --release <name>", "Filter by release")
     .option("-s, --status <status>", "Filter by status")
     .option("--claimed-by <agent>", "Filter by agent")
     .action(
       (
         taskIdStr: string | undefined,
-        opts: { release?: string; status?: string; claimedBy?: string },
+        opts: { status?: string; claimedBy?: string },
       ) => {
         const ctx = getCtx(program);
         const db = resolveDb(program);
 
-        let releaseId: number | undefined;
-        if (opts.release) {
-          const rel = findReleaseByName(db, opts.release);
-          if (!rel) throw new NotFoundError("release", opts.release);
-          releaseId = rel.id;
-        }
-
         const stories = findAllStories(db, {
           taskId: taskIdStr ? parseTaskNum(taskIdStr) : undefined,
-          releaseId,
           status: opts.status,
           claimedBy: opts.claimedBy,
         });
@@ -128,12 +96,11 @@ export function registerStoryCommand(program: Command): void {
           stories.length === 0
             ? "No stories found."
             : renderTable(
-                ["ID", "Title", "Status", "Release", "Claimed By"],
+                ["ID", "Title", "Status", "Claimed By"],
                 data.map((s) => [
                   s.shortId,
                   s.title,
                   s.status,
-                  s.release_id ? String(s.release_id) : "",
                   s.claimed_by ?? "",
                 ]),
               ),
@@ -177,7 +144,6 @@ export function registerStoryCommand(program: Command): void {
         ["Title", s.title],
         ["Description", s.description || "(none)"],
         ["Status", s.status],
-        ["Release", s.release_id ? String(s.release_id) : "(none)"],
         ["Claimed By", s.claimed_by ?? "(none)"],
         ["Estimate", s.estimate ?? "(none)"],
       ];
@@ -206,28 +172,19 @@ export function registerStoryCommand(program: Command): void {
     .argument("<id>", "Story ID")
     .option("-t, --title <text>", "New title")
     .option("-d, --desc <text>", "New description")
-    .option("-r, --release <name>", "Assign to release")
     .option("-e, --estimate <size>", "New estimate")
     .action(
       (
         idStr: string,
-        opts: { title?: string; desc?: string; release?: string; estimate?: string },
+        opts: { title?: string; desc?: string; estimate?: string },
       ) => {
         const ctx = getCtx(program);
         const db = resolveDb(program);
         const storyId = parseStoryNum(idStr);
 
-        let releaseId: number | null | undefined;
-        if (opts.release) {
-          const rel = findReleaseByName(db, opts.release);
-          if (!rel) throw new NotFoundError("release", opts.release);
-          releaseId = rel.id;
-        }
-
         const s = updateStory(db, storyId, {
           title: opts.title,
           description: opts.desc,
-          releaseId,
           estimate: opts.estimate,
         });
         if (!s) throw new NotFoundError("story", idStr);
@@ -295,13 +252,15 @@ export function registerStoryCommand(program: Command): void {
     .command("add")
     .argument("<story-id>", "Story ID (e.g. A01.T01.S001)")
     .argument("<title>", "Item description")
-    .option("-r, --repo <name>", "Repo this item belongs to")
-    .action((idStr: string, title: string, opts: { repo?: string }) => {
+    .option("-r, --role <name>", "Role this item belongs to (defaults to current repo's role)")
+    .action((idStr: string, title: string, opts: { role?: string }) => {
       const ctx = getCtx(program);
       const db = resolveDb(program);
+      const resolved = resolveWorkspace(program.opts().workspace);
+      const role = opts.role ?? resolved.role;
       const storyId = parseStoryNum(idStr);
       if (!findStoryById(db, storyId)) throw new NotFoundError("story", idStr);
-      const item = insertStoryItem(db, storyId, title, opts.repo);
+      const item = insertStoryItem(db, storyId, title, role);
       outputSuccess(
         ctx,
         item,

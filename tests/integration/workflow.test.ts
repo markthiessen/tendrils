@@ -48,8 +48,6 @@ function setup() {
   td(["story", "add", "A01.T01", "OAuth2"]);
   td(["status", "A01.T01.S001", "ready"]);
   td(["status", "A01.T01.S002", "ready"]);
-  td(["release", "add", "MVP"]);
-  td(["release", "assign", "A01.T01.S001", "MVP"]);
 }
 
 beforeEach(() => {
@@ -71,14 +69,6 @@ describe("td next", () => {
     expect(result.data.shortId).toBe("A01.T01.S001");
   });
 
-  it("returns bugs before stories when confirmed", () => {
-    td(["bug", "add", "Crash", "--severity", "high"]);
-    td(["status", "B001", "confirmed"]);
-    const result = tdJson(["next"]);
-    expect(result.data.entityType).toBe("bug");
-    expect(result.data.shortId).toBe("B001");
-  });
-
   it("returns null when nothing ready", () => {
     td(["status", "A01.T01.S001", "claimed"]);
     td(["status", "A01.T01.S002", "claimed"]);
@@ -86,10 +76,6 @@ describe("td next", () => {
     expect(result.data).toBeNull();
   });
 
-  it("filters by release", () => {
-    const result = tdJson(["next", "--release", "MVP"]);
-    expect(result.data.shortId).toBe("A01.T01.S001");
-  });
 });
 
 describe("td claim / unclaim", () => {

@@ -13,9 +13,13 @@ You are helping the user plan new development work using the tendrils story map.
 
 !`td stats 2>/dev/null`
 
-## Key decisions
+## Workspace repos
 
-!`td decisions 2>/dev/null`
+!`td repos --json 2>/dev/null`
+
+## This repo
+
+!`cat .tendrils/config.toml 2>/dev/null || echo "No .tendrils/config.toml found"`
 
 ## Instructions
 
@@ -23,20 +27,24 @@ The user wants to plan work toward this goal: "$ARGUMENTS"
 
 ### Step 1: Understand current state
 
-Review the story map and decisions above. Identify:
-- What activities and tasks already exist
+Review the story map above, then **fetch decisions from each repo** to understand what each repo does:
+```bash
+td decisions --repo /path/to/repo
+```
+
+Do this for every repo listed under "Workspace repos". This cross-repo context is critical for writing accurate checklist items — you need to know each repo's stack, conventions, and responsibilities.
+
+Also review:
+- What activities and tasks already exist in the story map
 - What stories are done vs. in progress vs. backlog
-- What releases are defined
-- What architectural decisions constrain or guide new work
 
 ### Step 2: Discuss with the user
 
 Before creating items, confirm your understanding:
 - What is the goal or feature they want to build?
 - Does it fit within an existing activity, or is it a new one?
-- What release should new stories target?
 - What's the rough priority?
-- Which repos are involved? (check `.tendrils.toml` for the current repo role)
+- Which repos are involved?
 
 ### Step 3: Create the plan
 
@@ -53,16 +61,16 @@ td task add A01 "Task Name"
 td story add A01.T01 "User can do X" --desc "Acceptance criteria or details"
 
 # Add checklist items for each repo that needs to contribute
-td story items A01.T01.S001 add "POST /api/endpoint with validation" --repo api
-td story items A01.T01.S001 add "Form component with error handling" --repo web
-
-# Assign to a release
-td release add "v2.0"  # if needed
-td release assign A01.T01.S001 "v2.0"
+# Use the role from `td repos` as the --role value
+td story items A01.T01.S001 add "POST /api/endpoint with validation" --role data-api
+td story items A01.T01.S001 add "Form component with error handling" --role web
+td story items A01.T01.S001 add "Add auth check to proxy middleware" --role analytics-api
 
 # Mark refined stories as ready
 td status A01.T01.S001 ready
 ```
+
+Every repo that needs to contribute to a story should have at least one checklist item tagged with its role.
 
 ### Step 4: Record decisions
 
@@ -85,10 +93,9 @@ Ask the user if the plan looks right and if anything needs adjusting.
 
 - **Stories are vertical slices** — "User can log in", not "Login API" + "Login UI"
 - Keep stories small and specific — each should be completable in a single session
-- **Add checklist items** for each repo that needs to contribute to a story
+- **Add checklist items for each repo** that needs to contribute — use the role as the `--role` value
+- Use decisions from each repo to write informed, specific checklist items (e.g., if the data-api uses Express + Prisma, reference those in the item description)
 - Order stories by dependency and priority (most important first)
 - Every story should have a clear "done" criteria in its description
 - Group related stories under the same task
-- Assign all planned stories to a release
-- Check `td decisions` for existing conventions before proposing new patterns
 - Record any new decisions that come out of planning

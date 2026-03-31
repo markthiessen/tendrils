@@ -1,43 +1,26 @@
-import { useStoryMap } from "./hooks/useStoryMap";
-import { useActivityFeed } from "./hooks/useActivityFeed";
-import { useDecisions } from "./hooks/useDecisions";
-import { StoryMap } from "./components/StoryMap";
-import { BugPanel } from "./components/BugPanel";
-import { ActivityFeed } from "./components/ActivityFeed";
-import { DecisionPanel } from "./components/DecisionPanel";
-import { StatsBar } from "./components/StatsBar";
-import { ProjectSwitcher } from "./components/ProjectSwitcher";
+import { useState } from "react";
+import { WorkspaceView } from "./components/WorkspaceView";
+import { SystemView } from "./components/SystemView";
+import { WorkspaceSwitcher } from "./components/WorkspaceSwitcher";
+import { ViewToggle } from "./components/ViewToggle";
 
 export function App() {
-  const { data, loading } = useStoryMap();
-  const { entries } = useActivityFeed();
-  const { decisions } = useDecisions();
-
-  if (loading) {
-    return <div className="loading">Loading story map...</div>;
-  }
-
-  if (!data) {
-    return <div className="error">Failed to load story map.</div>;
-  }
+  const [view, setView] = useState<"workspace" | "system">("workspace");
 
   return (
     <div className="app">
       <header className="app-header">
         <h1>Tendrils</h1>
-        <ProjectSwitcher />
-        <StatsBar data={data} />
+        <WorkspaceSwitcher />
+        <ViewToggle view={view} onChange={setView} />
       </header>
-      <div className="app-body">
-        <main className="app-main">
-          <StoryMap data={data} />
-        </main>
-        <aside className="app-sidebar">
-          <BugPanel bugs={data.bugs} />
-          <DecisionPanel decisions={decisions} />
-          <ActivityFeed entries={entries} />
-        </aside>
-      </div>
+      {view === "workspace" ? <WorkspaceView /> : (
+        <div className="app-body">
+          <main className="app-main app-main--full">
+            <SystemView />
+          </main>
+        </div>
+      )}
     </div>
   );
 }

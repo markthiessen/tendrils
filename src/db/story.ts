@@ -6,7 +6,7 @@ export function insertStory(
   taskId: number,
   title: string,
   description: string,
-  opts?: { releaseId?: number; estimate?: string },
+  opts?: { estimate?: string },
 ): Story {
   const maxSeq = db
     .prepare(
@@ -17,17 +17,16 @@ export function insertStory(
 
   const result = db
     .prepare(
-      `INSERT INTO stories (task_id, seq, title, description, release_id, estimate)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO stories (task_id, seq, title, description, estimate)
+       VALUES (?, ?, ?, ?, ?)`,
     )
-    .run(taskId, seq, title, description, opts?.releaseId ?? null, opts?.estimate ?? null);
+    .run(taskId, seq, title, description, opts?.estimate ?? null);
 
   return findStoryById(db, result.lastInsertRowid as number)!;
 }
 
 export interface StoryFilters {
   taskId?: number;
-  releaseId?: number;
   status?: string;
   claimedBy?: string;
 }
@@ -42,10 +41,6 @@ export function findAllStories(
   if (filters?.taskId !== undefined) {
     where.push("task_id = ?");
     params.push(filters.taskId);
-  }
-  if (filters?.releaseId !== undefined) {
-    where.push("release_id = ?");
-    params.push(filters.releaseId);
   }
   if (filters?.status !== undefined) {
     where.push("status = ?");
@@ -77,7 +72,6 @@ export function updateStory(
   fields: {
     title?: string;
     description?: string;
-    releaseId?: number | null;
     estimate?: string | null;
   },
 ): Story | undefined {
@@ -91,10 +85,6 @@ export function updateStory(
   if (fields.description !== undefined) {
     sets.push("description = ?");
     values.push(fields.description);
-  }
-  if (fields.releaseId !== undefined) {
-    sets.push("release_id = ?");
-    values.push(fields.releaseId);
   }
   if (fields.estimate !== undefined) {
     sets.push("estimate = ?");

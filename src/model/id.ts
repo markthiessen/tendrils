@@ -1,33 +1,27 @@
 import { InvalidArgumentError } from "../errors.js";
 
-export type EntityType = "activity" | "task" | "story" | "bug";
+export type EntityType = "activity" | "task" | "story";
 
 export interface ParsedId {
   project?: string;
   activity?: number;
   task?: number;
   story?: number;
-  bug?: number;
   type: EntityType;
 }
 
 const ID_PATTERN =
-  /^(?:([A-Za-z][A-Za-z0-9_-]*)::)?(?:(A)(\d+)(?:\.(T)(\d+)(?:\.(S)(\d+))?)?|(B)(\d+))$/;
+  /^(?:([A-Za-z][A-Za-z0-9_-]*)::)?(?:(A)(\d+)(?:\.(T)(\d+)(?:\.(S)(\d+))?)?)$/;
 
 export function parseId(input: string): ParsedId {
   const m = input.match(ID_PATTERN);
   if (!m) {
     throw new InvalidArgumentError(
-      `Invalid ID '${input}'. Expected format: A01, A01.T02, A01.T02.S001, B001, or Project::A01.T02.S001`,
+      `Invalid ID '${input}'. Expected format: A01, A01.T02, or A01.T02.S001`,
     );
   }
 
   const project = m[1] || undefined;
-
-  // Bug branch: B001
-  if (m[8] === "B") {
-    return { project, bug: parseInt(m[9]!, 10), type: "bug" };
-  }
 
   // Activity/Task/Story branch
   const activity = parseInt(m[3]!, 10);
@@ -58,10 +52,6 @@ export function formatStoryId(
   storyId: number,
 ): string {
   return `${formatTaskId(activityId, taskId)}.S${String(storyId).padStart(3, "0")}`;
-}
-
-export function formatBugId(id: number): string {
-  return `B${String(id).padStart(3, "0")}`;
 }
 
 export function formatFullId(project: string, shortId: string): string {

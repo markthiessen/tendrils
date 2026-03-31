@@ -41,7 +41,7 @@ body {
   color: #f1f5f9;
 }
 
-.project-switcher {
+.workspace-switcher {
   font-size: 13px;
   padding: 4px 8px;
   background: #0f172a;
@@ -51,11 +51,11 @@ body {
   cursor: pointer;
 }
 
-.project-switcher:hover {
+.workspace-switcher:hover {
   border-color: #3b82f6;
 }
 
-.project-switcher:disabled {
+.workspace-switcher:disabled {
   opacity: 0.5;
   cursor: wait;
 }
@@ -478,54 +478,10 @@ body {
   background: #2563eb;
 }
 
-/* Bug Panel */
-.panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.bug-panel h3, .activity-feed h3 {
+.activity-feed h3 {
   font-size: 14px;
   font-weight: 600;
   color: #f1f5f9;
-}
-
-.bug-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.bug-card {
-  background: #1e293b;
-  border: 1px solid #334155;
-  border-radius: 6px;
-  padding: 10px 12px;
-}
-
-.bug-card-header {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  margin-bottom: 4px;
-}
-
-.bug-id {
-  font-family: monospace;
-  font-size: 11px;
-  color: #64748b;
-}
-
-.bug-title {
-  font-size: 13px;
-}
-
-.bug-claimed {
-  font-size: 11px;
-  color: #8b5cf6;
-  margin-top: 2px;
 }
 
 /* Activity Feed */
@@ -576,11 +532,45 @@ body {
 }
 
 /* Decision Panel */
+.decision-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.decision-header h3 {
+  margin-bottom: 0;
+}
+
 .decision-panel h3 {
   font-size: 14px;
   font-weight: 600;
   color: #f1f5f9;
-  margin-bottom: 12px;
+}
+
+.decision-empty {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.repo-switcher {
+  font-size: 11px;
+  padding: 2px 6px;
+  background: #0f172a;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.repo-switcher:hover {
+  border-color: #3b82f6;
+}
+
+.repo-switcher:disabled {
+  opacity: 0.5;
+  cursor: wait;
 }
 
 .decision-list {
@@ -652,4 +642,377 @@ body {
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 14px;
+}
+
+/* View Toggle */
+.view-toggle {
+  display: flex;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.view-toggle-btn {
+  padding: 4px 14px;
+  font-size: 13px;
+  background: transparent;
+  color: #94a3b8;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.view-toggle-btn:hover {
+  color: #e2e8f0;
+}
+
+.view-toggle-btn--active {
+  background: #334155;
+  color: #f1f5f9;
+}
+
+.app-main--full {
+  flex: 1;
+  overflow: auto;
+  padding: 24px;
+}
+
+/* System View */
+.system-view {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  max-width: 1200px;
+}
+
+/* Architecture Section */
+.architecture-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.architecture-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.architecture-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.architecture-diagram {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 24px;
+  overflow: auto;
+  text-align: center;
+}
+
+.architecture-diagram svg {
+  max-width: 100%;
+}
+
+.architecture-empty {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.diagram-error {
+  color: #f87171;
+  font-size: 13px;
+}
+
+.architecture-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.architecture-textarea {
+  font-family: monospace;
+  font-size: 13px;
+  background: #0f172a;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 12px;
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.architecture-textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.architecture-editor-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Architecture Notes */
+.architecture-notes h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f1f5f9;
+  margin-bottom: 8px;
+}
+
+.architecture-notes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.architecture-note {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  padding: 6px 10px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.architecture-note:hover {
+  border-color: #475569;
+}
+
+.architecture-note--selected {
+  border-color: #3b82f6;
+}
+
+.architecture-note-id {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: monospace;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.architecture-note-content {
+  color: #e2e8f0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.note-type-badge {
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  font-family: -apple-system, sans-serif;
+}
+
+.note-type-badge--node {
+  background: #1e3a5f;
+  color: #60a5fa;
+}
+
+.note-type-badge--edge {
+  background: #3b1f4b;
+  color: #c084fc;
+}
+
+.architecture-note-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 6px;
+}
+
+.architecture-note-editor label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.architecture-note-editor textarea {
+  font-size: 13px;
+  background: #0f172a;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  padding: 8px;
+  resize: vertical;
+}
+
+.architecture-note-editor textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.architecture-add-note {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.architecture-add-note input {
+  flex: 1;
+  font-size: 13px;
+  background: #0f172a;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  padding: 4px 8px;
+}
+
+.architecture-add-note input:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.architecture-add-note select {
+  font-size: 12px;
+  background: #0f172a;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  padding: 4px 6px;
+}
+
+/* System Decisions */
+.system-decisions-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.system-decisions-section h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.repo-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid #334155;
+  padding-bottom: 4px;
+}
+
+.repo-tab {
+  padding: 6px 14px;
+  font-size: 13px;
+  background: transparent;
+  color: #94a3b8;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.repo-tab:hover {
+  color: #e2e8f0;
+}
+
+.repo-tab--active {
+  background: #1e293b;
+  color: #f1f5f9;
+  border-color: #334155;
+}
+
+.repo-tab-role {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.system-decisions-empty {
+  font-size: 13px;
+  color: #64748b;
+  padding: 8px 0;
+}
+
+.system-decisions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.system-decision-card {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.system-decision-title {
+  font-size: 13px;
+  color: #e2e8f0;
+  margin-bottom: 4px;
+}
+
+.system-decision-meta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 11px;
+  color: #64748b;
+}
+
+/* Shared Buttons */
+.btn-primary {
+  padding: 4px 12px;
+  font-size: 13px;
+  background: #3b82f6;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  background: #2563eb;
+}
+
+.btn-secondary {
+  padding: 4px 12px;
+  font-size: 13px;
+  background: #334155;
+  color: #e2e8f0;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  background: #475569;
+}
+
+.btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.btn-danger {
+  padding: 4px 12px;
+  font-size: 13px;
+  background: #7f1d1d;
+  color: #fca5a5;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-danger:hover {
+  background: #991b1b;
 }

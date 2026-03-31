@@ -9,16 +9,15 @@ import { emit } from "./sse.js";
 import { registerActivityRoutes } from "./routes/activities.js";
 import { registerTaskRoutes } from "./routes/tasks.js";
 import { registerStoryRoutes } from "./routes/stories.js";
-import { registerBugRoutes } from "./routes/bugs.js";
-import { registerReleaseRoutes } from "./routes/releases.js";
 import { registerWorkflowRoutes } from "./routes/workflow.js";
 import { registerMapRoutes } from "./routes/map.js";
 import { registerDecisionRoutes } from "./routes/decisions.js";
+import { registerArchitectureRoutes } from "./routes/architecture.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export async function createServer(slug: string, name: string, port: number) {
-  const ctx = createContext(slug, name);
+export async function createServer(name: string, port: number) {
+  const ctx = createContext(name);
 
   const app = Fastify({ logger: false });
 
@@ -56,30 +55,44 @@ export async function createServer(slug: string, name: string, port: number) {
     subscribe(reply);
   });
 
-  // Project routes
-  app.get("/api/projects", () => {
-    return { ok: true, data: ctx.listProjects() };
+  // Workspace routes
+  app.get("/api/workspaces", () => {
+    return { ok: true, data: ctx.listWorkspaces() };
   });
 
-  app.post<{ Params: { slug: string } }>("/api/projects/:slug/switch", (req) => {
+  app.post<{ Params: { name: string } }>("/api/workspaces/:name/switch", (req) => {
     try {
-      ctx.switchProject(req.params.slug);
-      emit("project.switched", { slug: ctx.slug, name: ctx.name });
-      return { ok: true, data: { slug: ctx.slug, name: ctx.name } };
+      ctx.switchWorkspace(req.params.name);
+      emit("workspace.switched", { name: ctx.name });
+      return { ok: true, data: { name: ctx.name } };
     } catch (e: any) {
       return { ok: false, error: { code: "NOT_FOUND", message: e.message } };
     }
+  });
+
+  // Repo routes (for decisions scoping)
+  app.get("/api/repos", () => {
+    return { ok: true, data: ctx.listRepos() };
+  });
+
+  app.post<{ Body: { path: string } }>("/api/repos/switch", (req) => {
+    const repo = ctx.listRepos().find((r) => r.path === req.body.path);
+    if (!repo) {
+      return { ok: false, error: { code: "NOT_FOUND", message: "Repo not found" } };
+    }
+    ctx.switchRepo(repo.path);
+    emit("repo.switched", { path: repo.path, name: repo.name });
+    return { ok: true, data: repo };
   });
 
   // API routes
   registerActivityRoutes(app, ctx);
   registerTaskRoutes(app, ctx);
   registerStoryRoutes(app, ctx);
-  registerBugRoutes(app, ctx);
-  registerReleaseRoutes(app, ctx);
   registerWorkflowRoutes(app, ctx);
   registerMapRoutes(app, ctx);
   registerDecisionRoutes(app, ctx);
+  registerArchitectureRoutes(app, ctx);
 
   await app.listen({ port, host: "0.0.0.0" });
 

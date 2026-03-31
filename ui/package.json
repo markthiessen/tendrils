@@ -8,6 +8,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "mermaid": "^11.13.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },

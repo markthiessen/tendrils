@@ -1,39 +1,56 @@
 import type Database from "better-sqlite3";
-import { getDb, initializeDb } from "../db/index.js";
-import { loadProjectConfig } from "../config/index.js";
-import { listProjectSlugs } from "../config/binding.js";
+import { getDb, getDecisionsDb, initializeDb } from "../db/index.js";
+import { loadWorkspaceConfig } from "../config/index.js";
+import { findAllRepos } from "../db/repo.js";
+import { listWorkspaceNames, findRepoRoot } from "../config/binding.js";
+import type { Repo } from "../model/types.js";
 
 export interface ServerContext {
-  slug: string;
   name: string;
+  repoRoot: string;
   readonly db: Database.Database;
-  switchProject(slug: string): void;
-  listProjects(): { slug: string; name: string; active: boolean }[];
+  readonly decisionsDb: Database.Database;
+  switchWorkspace(name: string): void;
+  listWorkspaces(): { name: string; active: boolean }[];
+  switchRepo(repoRoot: string): void;
+  listRepos(): (Repo & { active: boolean })[];
 }
 
-export function createContext(slug: string, name: string): ServerContext {
+export function createContext(name: string, repoRoot?: string): ServerContext {
+  const resolvedRepoRoot = repoRoot ?? findRepoRoot();
   const ctx: ServerContext = {
-    slug,
     name,
+    repoRoot: resolvedRepoRoot,
     get db() {
-      return getDb(ctx.slug);
+      return getDb(ctx.name);
     },
-    switchProject(newSlug: string) {
-      const config = loadProjectConfig(newSlug);
-      if (!config) throw new Error(`Project '${newSlug}' not found`);
-      initializeDb(newSlug);
-      ctx.slug = config.project.slug;
-      ctx.name = config.project.name;
+    get decisionsDb() {
+      return getDecisionsDb(ctx.repoRoot);
     },
-    listProjects() {
-      return listProjectSlugs().map((s) => {
-        const config = loadProjectConfig(s);
+    switchWorkspace(newName: string) {
+      const config = loadWorkspaceConfig(newName);
+      if (!config) throw new Error(`Workspace '${newName}' not found`);
+      initializeDb(newName);
+      ctx.name = newName;
+    },
+    listWorkspaces() {
+      return listWorkspaceNames().map((n) => {
+        const config = loadWorkspaceConfig(n);
         return {
-          slug: s,
-          name: config?.project.name ?? s,
-          active: s === ctx.slug,
+          name: config?.workspace.name ?? n,
+          active: n === ctx.name,
         };
       });
+    },
+    switchRepo(newRepoRoot: string) {
+      getDecisionsDb(newRepoRoot);
+      ctx.repoRoot = newRepoRoot;
+    },
+    listRepos() {
+      return findAllRepos(ctx.db).map((r) => ({
+        ...r,
+        active: r.path === ctx.repoRoot,
+      }));
     },
   };
   return ctx;

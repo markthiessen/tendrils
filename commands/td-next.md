@@ -1,13 +1,12 @@
 ---
-description: Pick up the next story or bug and start working on it
-argument-hint: [--release <name>] [--bugs|--stories]
+description: Pick up the next story and start working on it
 ---
 
-You are picking up the next available work item from the tendrils story map and starting work on it.
+You are picking up the next available story from the tendrils story map and starting work on it.
 
 ## Repo binding
 
-!`cat .tendrils.toml 2>/dev/null || echo "No .tendrils.toml found — repo role unknown"`
+!`cat .tendrils/config.toml 2>/dev/null || echo "No .tendrils/config.toml found — repo role unknown"`
 
 ## Next item
 
@@ -30,9 +29,9 @@ Read the repo binding above. The `repo` field (e.g., `repo = "api"` or `repo = "
 - What kind of implementation to produce (API endpoints vs UI components vs CLI commands, etc.)
 - Which items `td next` prioritized (it auto-filters for stories with incomplete items tagged to this repo)
 
-If no `.tendrils.toml` exists, check the codebase to infer the repo's role and tell the user they should create a binding:
+If no `.tendrils/config.toml` exists, check the codebase to infer the repo's role and tell the user they should create a binding:
 ```bash
-td init --project <name> --repo <role>
+td init <name> --role <role>
 ```
 
 ### Step 2: Check what's available
@@ -49,7 +48,6 @@ If nothing is ready:
 If a next item was found, present it to the user:
 - The item ID and title
 - Its description and acceptance criteria
-- Which release it belongs to (if any)
 - Its full checklist: `td story items <id> list`
 - **Highlight which checklist items are tagged for this repo** vs. other repos
 - Note if items in other repos are blocking or need to be done first
@@ -81,7 +79,7 @@ If you're in the `web` repo, build the login page — don't touch the API endpoi
 
 If no checklist items exist yet, create them based on what this repo should contribute:
 ```bash
-td story items <id> add "Description of this repo's work" --repo <repo-role>
+td story items <id> add "Description of this repo's work" --role <role>
 ```
 
 If the story has items for other repos that aren't done yet and your work depends on them, flag this:
@@ -123,7 +121,6 @@ Present a summary of what was done and what remains across other repos.
 - Stories are vertical slices — but each repo contributes its layer of that slice via checklist items
 - Check `td decisions` for conventions before making architectural choices
 - Keep commits focused on the story being worked on
-- If you discover a bug while working, file it separately: `td bug add "Title" --desc "Details"`
 - If the story is blocked by another repo's work, set blocked status with a clear reason
 - If the story turns out to be bigger than expected, discuss with the user before splitting it
 - If a story has no checklist items, create them — this helps the next repo know what's already done

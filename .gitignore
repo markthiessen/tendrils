@@ -1,7 +1,4 @@
 node_modules/
 dist/
-*.db
-*.db-wal
-*.db-shm
-.tendrils.toml
+.tendrils/
 .claude/commands/
