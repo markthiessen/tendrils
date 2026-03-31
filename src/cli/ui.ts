@@ -35,7 +35,7 @@ export function registerUiCommand(program: Command): void {
       const preferred = Number(opts.port) || 24242;
       const port = await findOpenPort(preferred);
 
-      await createServer(resolved.slug, port);
+      await createServer(resolved.slug, resolved.name, port);
 
       const url = `http://localhost:${port}`;
       console.log(`Tendrils UI for '${resolved.name}' running at ${url}`);

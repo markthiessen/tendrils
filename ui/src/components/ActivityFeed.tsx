@@ -1,5 +1,10 @@
 import type { LogEntry } from "../hooks/useActivityFeed";
 
+function formatEntity(entry: LogEntry): string {
+  const prefix = entry.entity_type === "bug" ? "B" : "S";
+  return `${prefix}${entry.entity_id}`;
+}
+
 export function ActivityFeed({ entries }: { entries: LogEntry[] }) {
   if (entries.length === 0) return null;
 
@@ -12,6 +17,7 @@ export function ActivityFeed({ entries }: { entries: LogEntry[] }) {
             <span className="feed-time">
               {new Date(entry.created_at + "Z").toLocaleTimeString()}
             </span>
+            <span className="feed-entity">{formatEntity(entry)}</span>
             {entry.agent && <span className="feed-agent">@{entry.agent}</span>}
             {entry.old_status && entry.new_status && (
               <span className="feed-status">

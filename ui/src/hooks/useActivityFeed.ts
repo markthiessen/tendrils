@@ -27,6 +27,7 @@ export function useActivityFeed() {
     es.addEventListener("log.created", () => refresh());
     es.addEventListener("story.updated", () => refresh());
     es.addEventListener("bug.updated", () => refresh());
+    es.addEventListener("project.switched", () => refresh());
 
     return () => es.close();
   }, [refresh]);

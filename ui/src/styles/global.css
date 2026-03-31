@@ -41,6 +41,25 @@ body {
   color: #f1f5f9;
 }
 
+.project-switcher {
+  font-size: 13px;
+  padding: 4px 8px;
+  background: #0f172a;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.project-switcher:hover {
+  border-color: #3b82f6;
+}
+
+.project-switcher:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
 .stats-bar {
   display: flex;
   gap: 16px;
@@ -275,6 +294,46 @@ body {
   border-radius: 4px;
 }
 
+.story-items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 6px;
+  font-size: 11px;
+}
+
+.story-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  padding: 1px 0;
+}
+
+.story-item input[type="checkbox"] {
+  accent-color: #3b82f6;
+  margin: 0;
+  cursor: pointer;
+}
+
+.story-item--done .story-item-title {
+  text-decoration: line-through;
+  color: #475569;
+}
+
+.story-item-title {
+  color: #94a3b8;
+}
+
+.story-item-repo {
+  color: #64748b;
+  font-size: 10px;
+  background: #334155;
+  padding: 0 4px;
+  border-radius: 3px;
+  margin-left: auto;
+}
+
 .story-actions {
   display: flex;
   gap: 4px;
@@ -493,6 +552,15 @@ body {
   font-size: 11px;
 }
 
+.feed-entity {
+  font-family: monospace;
+  font-size: 10px;
+  color: #3b82f6;
+  background: #1e3a5f;
+  padding: 0 4px;
+  border-radius: 3px;
+}
+
 .feed-agent {
   color: #8b5cf6;
   font-size: 11px;
@@ -505,6 +573,65 @@ body {
 
 .feed-message {
   color: #94a3b8;
+}
+
+/* Decision Panel */
+.decision-panel h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f1f5f9;
+  margin-bottom: 12px;
+}
+
+.decision-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.decision-card {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.decision-title {
+  font-size: 12px;
+  color: #e2e8f0;
+}
+
+.decision-meta {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.decision-tags {
+  display: flex;
+  gap: 3px;
+}
+
+.decision-tag {
+  font-size: 10px;
+  color: #3b82f6;
+  background: #1e3a5f;
+  padding: 0 5px;
+  border-radius: 3px;
+}
+
+.decision-agent {
+  font-size: 10px;
+  color: #8b5cf6;
+}
+
+.decision-date {
+  font-size: 10px;
+  color: #475569;
+  font-family: monospace;
+  margin-left: auto;
 }
 
 /* Empty State */

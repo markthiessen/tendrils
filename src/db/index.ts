@@ -1,24 +1,26 @@
 import Database from "better-sqlite3";
 import fs from "node:fs";
 import { getProjectDbPath, getProjectDir } from "../config/index.js";
-import { SCHEMA_V1 } from "./schema.js";
+import { SCHEMA_V1, SCHEMA_V2, SCHEMA_V3 } from "./schema.js";
 
-let _db: Database.Database | null = null;
+const _dbs = new Map<string, Database.Database>();
 
 export function getDb(slug: string): Database.Database {
-  if (_db) return _db;
+  const existing = _dbs.get(slug);
+  if (existing) return existing;
   const dbPath = getProjectDbPath(slug);
-  _db = new Database(dbPath);
-  _db.pragma("journal_mode = WAL");
-  _db.pragma("foreign_keys = ON");
-  return _db;
+  const db = new Database(dbPath);
+  db.pragma("journal_mode = WAL");
+  db.pragma("foreign_keys = ON");
+  _dbs.set(slug, db);
+  return db;
 }
 
 export function closeDb(): void {
-  if (_db) {
-    _db.close();
-    _db = null;
+  for (const db of _dbs.values()) {
+    db.close();
   }
+  _dbs.clear();
 }
 
 export function initializeDb(slug: string): void {
@@ -30,6 +32,12 @@ export function initializeDb(slug: string): void {
 
   if (version < 1) {
     db.exec(SCHEMA_V1);
+  }
+  if (version < 2) {
+    db.exec(SCHEMA_V2);
+  }
+  if (version < 3) {
+    db.exec(SCHEMA_V3);
   }
 }
 

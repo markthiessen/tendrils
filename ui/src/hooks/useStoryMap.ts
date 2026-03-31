@@ -1,6 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { get, type Envelope } from "../api/client";
 
+export interface StoryItemData {
+  id: number;
+  story_id: number;
+  title: string;
+  repo: string | null;
+  done: number;
+}
+
 export interface StoryData {
   id: number;
   task_id: number;
@@ -12,6 +20,7 @@ export interface StoryData {
   claimed_by: string | null;
   estimate: string | null;
   shortId: string;
+  items: StoryItemData[];
 }
 
 export interface TaskData {
@@ -83,6 +92,10 @@ export function useStoryMap() {
     es.addEventListener("release.created", () => refresh());
     es.addEventListener("release.updated", () => refresh());
     es.addEventListener("release.deleted", () => refresh());
+    es.addEventListener("project.switched", () => {
+      setLoading(true);
+      refresh();
+    });
 
     return () => es.close();
   }, [refresh]);

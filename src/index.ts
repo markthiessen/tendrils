@@ -16,6 +16,7 @@ import { registerWorkflowCommands } from "./cli/status.js";
 import { registerLogCommands } from "./cli/log.js";
 import { registerMapCommand } from "./cli/map.js";
 import { registerUiCommand } from "./cli/ui.js";
+import { registerDecisionCommands } from "./cli/decision.js";
 import { closeDb } from "./db/index.js";
 
 const program = new Command();
@@ -43,6 +44,7 @@ registerWorkflowCommands(program);
 registerLogCommands(program);
 registerMapCommand(program);
 registerUiCommand(program);
+registerDecisionCommands(program);
 
 // Error handling
 program.exitOverride();

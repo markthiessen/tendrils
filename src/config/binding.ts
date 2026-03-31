@@ -13,6 +13,7 @@ export interface ResolvedProject {
   slug: string;
   name: string;
   source: string;
+  repo?: string;
 }
 
 export function resolveProject(
@@ -56,6 +57,7 @@ export function resolveProject(
         slug: config.project.slug,
         name: config.project.name,
         source: ".tendrils.toml",
+        repo: binding.repo,
       };
     }
   }
@@ -72,6 +74,7 @@ export function resolveProject(
             slug: config.project.slug,
             name: config.project.name,
             source: "binding path match",
+            repo: b.repo,
           };
         }
       }
@@ -130,7 +133,11 @@ export function listProjectSlugs(): string[] {
     .map((d) => d.name);
 }
 
-export function writeRepoBinding(dir: string, projectSlug: string): void {
+export function writeRepoBinding(dir: string, projectSlug: string, repo?: string): void {
   const bindingPath = path.join(dir, ".tendrils.toml");
-  fs.writeFileSync(bindingPath, `project = "${projectSlug}"\n`, "utf-8");
+  let content = `project = "${projectSlug}"\n`;
+  if (repo) {
+    content += `repo = "${repo}"\n`;
+  }
+  fs.writeFileSync(bindingPath, content, "utf-8");
 }
