@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { get, type Envelope } from "../api/client";
+import { useEventSource } from "./useEventSource";
 
 export interface DecisionData {
   id: number;
@@ -11,6 +12,10 @@ export interface DecisionData {
   created_at: string;
 }
 
+const DECISION_EVENTS = [
+  "decision.created", "decision.deleted", "project.switched",
+];
+
 export function useDecisions() {
   const [decisions, setDecisions] = useState<DecisionData[]>([]);
 
@@ -21,14 +26,11 @@ export function useDecisions() {
 
   useEffect(() => {
     refresh();
-
-    const es = new EventSource("/events");
-    es.addEventListener("decision.created", () => refresh());
-    es.addEventListener("decision.deleted", () => refresh());
-    es.addEventListener("project.switched", () => refresh());
-
-    return () => es.close();
+    const poll = setInterval(refresh, 5000);
+    return () => clearInterval(poll);
   }, [refresh]);
+
+  useEventSource(DECISION_EVENTS, refresh);
 
   return { decisions, refresh };
 }
