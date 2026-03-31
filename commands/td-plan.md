@@ -3,52 +3,53 @@ description: Plan new work on the tendrils story map
 argument-hint: [goal]
 ---
 
-You are helping the user plan new development work using the tendrils story map.
+You are adding planned work to the tendrils story map. If the goal has already been discussed in this conversation, build on that context — don't re-ask questions that were already answered. Add cross-repo knowledge and decisions to improve on what was discussed.
 
 ## Current story map
 
-!`td map 2>/dev/null || echo "No story map yet. Run 'td init' first."`
+!`td map`
 
 ## Current stats
 
-!`td stats 2>/dev/null`
+!`td stats`
 
 ## Workspace repos
 
-!`td repos --json 2>/dev/null`
+!`td repos --json`
+
+## Architecture
+
+!`td architecture`
+
+## Decisions across all repos
+
+!`td decisions --all`
 
 ## This repo
 
-!`cat .tendrils/config.toml 2>/dev/null || echo "No .tendrils/config.toml found"`
+!`cat .tendrils/config.toml`
 
 ## Instructions
 
-The user wants to plan work toward this goal: "$ARGUMENTS"
+Goal: "$ARGUMENTS"
 
-### Step 1: Understand current state
+### Step 1: Understand the system
 
-Review the story map above, then **fetch decisions from each repo** to understand what each repo does:
-```bash
-td decisions --repo /path/to/repo
-```
+Review the architecture diagram and decisions above. This tells you:
+- How the repos are connected and what role each plays
+- What stack and conventions each repo uses
+- What's already been built and decided
 
-Do this for every repo listed under "Workspace repos". This cross-repo context is critical for writing accurate checklist items — you need to know each repo's stack, conventions, and responsibilities.
+### Step 2: Shape the plan
 
-Also review:
-- What activities and tasks already exist in the story map
-- What stories are done vs. in progress vs. backlog
+If the goal was already discussed in this conversation, use that context. Improve on it with what you now know about each repo's decisions and the system architecture.
 
-### Step 2: Discuss with the user
-
-Before creating items, confirm your understanding:
-- What is the goal or feature they want to build?
+If this is a fresh start, discuss with the user:
+- What is the goal or feature?
 - Does it fit within an existing activity, or is it a new one?
-- What's the rough priority?
 - Which repos are involved?
 
-### Step 3: Create the plan
-
-Based on the discussion, add items to the story map:
+### Step 3: Populate the story map
 
 ```bash
 # New activity if needed
@@ -57,45 +58,42 @@ td activity add "Activity Name"
 # New tasks
 td task add A01 "Task Name"
 
-# New stories as vertical slices (user-visible outcomes, not layer work)
-td story add A01.T01 "User can do X" --desc "Acceptance criteria or details"
+# Stories as vertical slices (user-visible outcomes, not layer work)
+td story add A01.T01 "User can do X" --desc "Acceptance criteria"
 
-# Add checklist items for each repo that needs to contribute
-# Use the role from `td repos` as the --role value
+# Checklist items for each repo that needs to contribute
 td story items A01.T01.S001 add "POST /api/endpoint with validation" --role data-api
 td story items A01.T01.S001 add "Form component with error handling" --role web
-td story items A01.T01.S001 add "Add auth check to proxy middleware" --role analytics-api
 
 # Mark refined stories as ready
 td story status A01.T01.S001 ready
 ```
 
-Every repo that needs to contribute to a story should have at least one checklist item tagged with its role.
+Every repo that needs to contribute should have at least one checklist item tagged with its role.
 
 ### Step 4: Record decisions
 
-If planning reveals new architectural decisions, record them:
+If planning reveals architectural decisions, record them:
 ```bash
 td decide "New feature uses WebSocket for real-time updates" --tag architecture
-td decide "File uploads go to S3 with presigned URLs" --tag storage
 ```
 
 ### Step 5: Review
 
-After adding items, show the updated map:
 ```bash
 td map
 ```
 
-Ask the user if the plan looks right and if anything needs adjusting.
+Show the updated map and ask if anything needs adjusting.
 
 ## Guidelines
 
+- **Build on conversation context** — if a plan was already discussed, don't restart from scratch
 - **Stories are vertical slices** — "User can log in", not "Login API" + "Login UI"
-- Keep stories small and specific — each should be completable in a single session
-- **Add checklist items for each repo** that needs to contribute — use the role as the `--role` value
-- Use decisions from each repo to write informed, specific checklist items (e.g., if the data-api uses Express + Prisma, reference those in the item description)
-- Order stories by dependency and priority (most important first)
-- Every story should have a clear "done" criteria in its description
+- Keep stories small — each should be completable in a single session
+- **Add checklist items for each repo** — use the role as the `--role` value
+- Use decisions and architecture to write informed checklist items
+- Order stories by dependency and priority
+- Every story should have clear "done" criteria in its description
 - Group related stories under the same task
 - Record any new decisions that come out of planning

@@ -34,7 +34,7 @@ export function registerWorkspaceCommand(program: Command): void {
         return {
           name,
           bindings: config?.bindings?.length ?? 0,
-          created_at: config?.workspace.created_at ?? "",
+          created_at: config?.workspace?.created_at ?? "",
         };
       });
 
@@ -126,16 +126,19 @@ function showWorkspaceInfo(ctx: OutputContext, name: string): void {
     throw new NotFoundError("workspace", name);
   }
 
+  const wsName = config.workspace?.name ?? name;
+  const wsCreated = config.workspace?.created_at ?? "";
+
   outputSuccess(
     ctx,
     {
-      name: config.workspace.name,
-      created_at: config.workspace.created_at,
+      name: wsName,
+      created_at: wsCreated,
       bindings: config.bindings ?? [],
     },
     renderKeyValue([
-      ["Name", config.workspace.name],
-      ["Created", config.workspace.created_at],
+      ["Name", wsName],
+      ["Created", wsCreated],
       [
         "Bindings",
         config.bindings?.map((b) => b.path).join("\n") || "none",
