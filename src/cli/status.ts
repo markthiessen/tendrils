@@ -61,6 +61,11 @@ export function registerWorkflowCommands(program: Command): void {
         params.push(rel.id);
       }
 
+      // Auto-unblock stories whose repo items are now complete
+      if (repo) {
+        autoUnblockStories(db, repo);
+      }
+
       const showStories = !opts.bugs || opts.stories;
       const showBugs = !opts.stories || opts.bugs;
 
@@ -208,6 +213,55 @@ export function registerWorkflowCommands(program: Command): void {
         }
       },
     );
+}
+
+/**
+ * Find blocked stories where the blocking repo's checklist items are now all
+ * done, and move them back to in-progress automatically.
+ */
+function autoUnblockStories(
+  db: import("better-sqlite3").Database,
+  repo: string,
+): void {
+  // Find stories that are blocked and have checklist items
+  const blocked = db
+    .prepare(
+      `SELECT s.id, s.blocked_reason, t.activity_id, s.task_id
+       FROM stories s
+       JOIN tasks t ON s.task_id = t.id
+       WHERE s.status = 'blocked'
+         AND s.id IN (SELECT DISTINCT story_id FROM story_items)`,
+    )
+    .all() as { id: number; blocked_reason: string | null; activity_id: number; task_id: number }[];
+
+  for (const story of blocked) {
+    // Check if all non-current-repo items are done (the blocking work is complete)
+    const pendingOtherRepo = db
+      .prepare(
+        `SELECT COUNT(*) as count FROM story_items
+         WHERE story_id = ? AND repo != ? AND done = 0`,
+      )
+      .get(story.id, repo) as { count: number };
+
+    if (pendingOtherRepo.count === 0) {
+      db.prepare(
+        `UPDATE stories SET status = 'in-progress', blocked_reason = NULL,
+         updated_at = datetime('now') WHERE id = ?`,
+      ).run(story.id);
+
+      const shortId = formatStoryId(story.activity_id, story.task_id, story.id);
+      insertLogEntry(
+        db, "story", story.id,
+        `Auto-unblocked: other repo items are complete`,
+        undefined, "blocked", "in-progress",
+      );
+
+      const ctx: OutputContext = { json: false, quiet: false };
+      if (!ctx.quiet) {
+        console.error(`Unblocked ${shortId} — blocking items resolved`);
+      }
+    }
+  }
 }
 
 function claimStory(
