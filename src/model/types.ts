@@ -109,6 +109,13 @@ export interface Decision {
   created_at: string;
 }
 
+export interface StoryDependency {
+  id: number;
+  story_id: number;
+  depends_on_id: number;
+  created_at: string;
+}
+
 export interface WorkLogEntry {
   id: number;
   entity_type: "story" | "bug";

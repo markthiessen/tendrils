@@ -127,3 +127,19 @@ CREATE INDEX IF NOT EXISTS idx_story_items_story ON story_items(story_id);
 
 INSERT OR IGNORE INTO schema_version (version) VALUES (3);
 `;
+
+export const SCHEMA_V4 = `
+CREATE TABLE IF NOT EXISTS story_dependencies (
+  id INTEGER PRIMARY KEY,
+  story_id INTEGER NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+  depends_on_id INTEGER NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(story_id, depends_on_id),
+  CHECK(story_id != depends_on_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_story_deps_story ON story_dependencies(story_id);
+CREATE INDEX IF NOT EXISTS idx_story_deps_depends ON story_dependencies(depends_on_id);
+
+INSERT OR IGNORE INTO schema_version (version) VALUES (4);
+`;
