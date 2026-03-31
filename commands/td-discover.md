@@ -9,7 +9,7 @@ Decisions are per-repo. When decisions already exist, check for duplicates and o
 
 ## Current decisions
 
-!`td decisions --json 2>/dev/null || echo "[]"`
+!`td decisions --json`
 
 ## Instructions
 

@@ -7,19 +7,19 @@ You are helping the user plan new development work using the tendrils story map.
 
 ## Current story map
 
-!`td map 2>/dev/null || echo "No story map yet. Run 'td init' first."`
+!`td map`
 
 ## Current stats
 
-!`td stats 2>/dev/null`
+!`td stats`
 
 ## Workspace repos
 
-!`td repos --json 2>/dev/null`
+!`td repos --json`
 
 ## This repo
 
-!`cat .tendrils/config.toml 2>/dev/null || echo "No .tendrils/config.toml found"`
+!`cat .tendrils/config.toml`
 
 ## Instructions
 

@@ -6,19 +6,19 @@ You are providing a quick status update on the tendrils story map.
 
 ## Story Map
 
-!`td map 2>/dev/null || echo "No story map found. Run 'td init' to get started."`
+!`td map`
 
 ## Statistics
 
-!`td stats 2>/dev/null`
+!`td stats`
 
 ## Recent Activity
 
-!`td history --recent 2>/dev/null`
+!`td history --recent`
 
 ## Key Decisions
 
-!`td decisions 2>/dev/null`
+!`td decisions`
 
 ## Instructions
 

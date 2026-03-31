@@ -6,19 +6,19 @@ You are picking up the next available story from the tendrils story map and star
 
 ## Repo binding
 
-!`cat .tendrils/config.toml 2>/dev/null || echo "No .tendrils/config.toml found — repo role unknown"`
+!`cat .tendrils/config.toml`
 
 ## Next item
 
-!`td next --json 2>/dev/null || echo "null"`
+!`td next --json`
 
 ## Current story map
 
-!`td map 2>/dev/null || echo "No story map found. Run 'td init' to get started."`
+!`td map`
 
 ## Key decisions
 
-!`td decisions 2>/dev/null`
+!`td decisions`
 
 ## Instructions
 
