@@ -35,7 +35,6 @@ export interface Story {
   seq: number;
   title: string;
   description: string;
-  release_id: number | null;
   status: StoryStatus;
   claimed_by: string | null;
   claimed_at: string | null;
@@ -45,49 +44,12 @@ export interface Story {
   updated_at: string;
 }
 
-export type BugSeverity = "critical" | "high" | "medium" | "low";
-
-export type BugStatus =
-  | "reported"
-  | "confirmed"
-  | "claimed"
-  | "in-progress"
-  | "blocked"
-  | "fixed"
-  | "verified"
-  | "wont-fix"
-  | "cancelled";
-
-export interface Bug {
+export interface Repo {
   id: number;
-  title: string;
-  description: string;
-  severity: BugSeverity;
-  status: BugStatus;
-  linked_story_id: number | null;
-  linked_task_id: number | null;
-  release_id: number | null;
-  claimed_by: string | null;
-  claimed_at: string | null;
-  blocked_reason: string | null;
-  found_by: string | null;
-  repro_steps: string | null;
-  expected: string | null;
-  actual: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export type ReleaseStatus = "planning" | "active" | "released" | "archived";
-
-export interface Release {
-  id: number;
+  path: string;
+  role: string | null;
   name: string;
-  description: string;
-  sort_order: number;
-  status: ReleaseStatus;
   created_at: string;
-  updated_at: string;
 }
 
 export interface StoryItem {
@@ -102,7 +64,7 @@ export interface StoryItem {
 export interface Decision {
   id: number;
   title: string;
-  context_type: "story" | "bug" | null;
+  context_type: "story" | null;
   context_id: number | null;
   tags: string;
   agent: string | null;
@@ -118,7 +80,7 @@ export interface StoryDependency {
 
 export interface WorkLogEntry {
   id: number;
-  entity_type: "story" | "bug";
+  entity_type: "story";
   entity_id: number;
   agent: string | null;
   message: string;

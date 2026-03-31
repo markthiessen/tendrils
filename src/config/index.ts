@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
@@ -9,23 +10,22 @@ export interface GlobalConfig {
   auto_confirm: boolean;
 }
 
-export interface ProjectBinding {
+export interface WorkspaceBinding {
   path: string;
-  repo?: string;
+  role?: string;
 }
 
-export interface ProjectConfig {
-  project: {
+export interface WorkspaceConfig {
+  workspace: {
     name: string;
-    slug: string;
     created_at: string;
   };
-  bindings: ProjectBinding[];
+  bindings: WorkspaceBinding[];
 }
 
 export interface RepoBinding {
-  project: string;
-  repo?: string;
+  workspace: string;
+  role?: string;
 }
 
 const DEFAULT_GLOBAL_CONFIG: GlobalConfig = {
@@ -38,17 +38,26 @@ export function getTendrilsHome(): string {
   return process.env["TD_HOME"] ?? path.join(os.homedir(), ".tendrils");
 }
 
-export function getProjectsDir(): string {
-  return path.join(getTendrilsHome(), "projects");
+export function getWorkspacesDir(): string {
+  return path.join(getTendrilsHome(), "workspaces");
 }
 
-export function getProjectDir(slug: string): string {
-  return path.join(getProjectsDir(), slug);
+export function getWorkspaceDir(name: string): string {
+  return path.join(getWorkspacesDir(), name);
 }
 
-export function getProjectDbPath(slug: string): string {
-  return path.join(getProjectDir(slug), "map.db");
+export function getWorkspaceDbPath(name: string): string {
+  return path.join(getWorkspaceDir(name), "map.db");
 }
+
+export function repoHash(repoRoot: string): string {
+  return crypto.createHash("sha256").update(repoRoot).digest("hex").slice(0, 16);
+}
+
+export function getRepoDecisionsDbPath(repoRoot: string): string {
+  return path.join(getTendrilsHome(), "repos", repoHash(repoRoot), "decisions.db");
+}
+
 
 export function loadGlobalConfig(): GlobalConfig {
   const configPath = path.join(getTendrilsHome(), "config.toml");
@@ -60,20 +69,21 @@ export function loadGlobalConfig(): GlobalConfig {
   return { ...DEFAULT_GLOBAL_CONFIG, ...parsed };
 }
 
-export function loadProjectConfig(slug: string): ProjectConfig | null {
-  const configPath = path.join(getProjectDir(slug), "config.toml");
+export function loadWorkspaceConfig(name: string): WorkspaceConfig | null {
+  const configPath = path.join(getWorkspaceDir(name), "config.toml");
   if (!fs.existsSync(configPath)) {
     return null;
   }
   const raw = fs.readFileSync(configPath, "utf-8");
-  return TOML.parse(raw) as unknown as ProjectConfig;
+  const parsed = TOML.parse(raw) as any;
+  return parsed as WorkspaceConfig;
 }
 
-export function saveProjectConfig(
-  slug: string,
-  config: ProjectConfig,
+export function saveWorkspaceConfig(
+  name: string,
+  config: WorkspaceConfig,
 ): void {
-  const dir = getProjectDir(slug);
+  const dir = getWorkspaceDir(name);
   fs.mkdirSync(dir, { recursive: true });
   const configPath = path.join(dir, "config.toml");
   const content = toToml(config as unknown as Record<string, unknown>);

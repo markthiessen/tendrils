@@ -17,7 +17,6 @@ export interface StoryData {
   title: string;
   description: string;
   status: string;
-  release_id: number | null;
   claimed_by: string | null;
   estimate: string | null;
   shortId: string;
@@ -41,36 +40,15 @@ export interface ActivityData {
   tasks: TaskData[];
 }
 
-export interface BugData {
-  id: number;
-  title: string;
-  severity: string;
-  status: string;
-  claimed_by: string | null;
-  shortId: string;
-}
-
-export interface ReleaseData {
-  id: number;
-  name: string;
-  status: string;
-  sort_order: number;
-}
-
 export interface MapData {
   activities: ActivityData[];
-  bugs: BugData[];
-  releases: ReleaseData[];
 }
 
 const MAP_EVENTS = [
   "story.created", "story.updated", "story.deleted",
   "activity.created", "activity.updated", "activity.deleted",
   "task.created", "task.updated", "task.deleted",
-  "bug.created", "bug.updated", "bug.deleted",
-  "release.created", "release.updated", "release.deleted",
-  "decision.created", "decision.deleted",
-  "project.switched",
+  "workspace.switched",
 ];
 
 export function useStoryMap() {

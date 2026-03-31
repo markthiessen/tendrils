@@ -1,23 +1,37 @@
 import type { FastifyInstance } from "fastify";
 import { insertDecision, findAllDecisions, deleteDecision } from "../../db/decision.js";
+import { getDecisionsDb } from "../../db/index.js";
+import { findAllRepos } from "../../db/repo.js";
 import { emit } from "../sse.js";
 import type { ServerContext } from "../context.js";
 
 export function registerDecisionRoutes(app: FastifyInstance, ctx: ServerContext) {
   app.get<{ Querystring: { tag?: string } }>("/api/decisions", (req) => {
-    return { ok: true, data: findAllDecisions(ctx.db, { tag: req.query.tag }) };
+    return { ok: true, data: findAllDecisions(ctx.decisionsDb, { tag: req.query.tag }) };
+  });
+
+  app.get<{ Querystring: { tag?: string; repoPath?: string } }>("/api/decisions/by-repo", (req) => {
+    if (!req.query.repoPath) {
+      return { ok: false, error: { code: "INVALID_ARGUMENT", message: "repoPath query parameter required" } };
+    }
+    const knownRepo = findAllRepos(ctx.db).find((r) => r.path === req.query.repoPath);
+    if (!knownRepo) {
+      return { ok: false, error: { code: "NOT_FOUND", message: "Repo not found in this workspace" } };
+    }
+    const db = getDecisionsDb(knownRepo.path);
+    return { ok: true, data: findAllDecisions(db, { tag: req.query.tag }) };
   });
 
   app.post<{
     Body: {
       title: string;
-      contextType?: "story" | "bug";
+      contextType?: "story";
       contextId?: number;
       tags?: string[];
       agent?: string;
     };
   }>("/api/decisions", (req) => {
-    const d = insertDecision(ctx.db, req.body.title, {
+    const d = insertDecision(ctx.decisionsDb, req.body.title, {
       contextType: req.body.contextType,
       contextId: req.body.contextId,
       tags: req.body.tags,
@@ -29,7 +43,7 @@ export function registerDecisionRoutes(app: FastifyInstance, ctx: ServerContext)
 
   app.delete<{ Params: { id: string } }>("/api/decisions/:id", (req) => {
     const id = Number(req.params.id);
-    const deleted = deleteDecision(ctx.db, id);
+    const deleted = deleteDecision(ctx.decisionsDb, id);
     if (!deleted) return { ok: false, error: { code: "NOT_FOUND", message: "Decision not found" } };
     emit("decision.deleted", { id });
     return { ok: true, data: { id, deleted: true } };

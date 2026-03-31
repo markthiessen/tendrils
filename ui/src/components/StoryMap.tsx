@@ -1,4 +1,4 @@
-import type { MapData, StoryData, ReleaseData } from "../hooks/useStoryMap";
+import type { MapData } from "../hooks/useStoryMap";
 import { StoryCard } from "./StoryCard";
 import { EditableText } from "./EditableText";
 import { AddForm } from "./AddForm";
@@ -33,27 +33,6 @@ export function StoryMap({ data }: { data: MapData }) {
     await del(`/api/tasks/${id}`);
   };
 
-  const handleAddRelease = async (name: string) => {
-    await post("/api/releases", { name });
-  };
-
-  const handleDropStory = async (
-    storyId: number,
-    releaseId: number | null,
-  ) => {
-    if (releaseId === null) {
-      await post("/api/releases/unassign", { storyId });
-    } else {
-      const rel = data.releases.find((r) => r.id === releaseId);
-      if (rel) {
-        await post("/api/releases/assign", {
-          storyId,
-          releaseName: rel.name,
-        });
-      }
-    }
-  };
-
   if (data.activities.length === 0) {
     return (
       <div className="empty-state">
@@ -71,26 +50,6 @@ export function StoryMap({ data }: { data: MapData }) {
     a.tasks.map((t) => ({ ...t, activityId: a.id, activityTitle: a.title, activityShortId: a.shortId })),
   );
 
-  // All stories flat
-  const allStories = data.activities.flatMap((a) =>
-    a.tasks.flatMap((t) => t.stories),
-  );
-
-  // Release rows + "unassigned" row
-  const releaseRows: Array<{ id: number | null; name: string }> = [
-    ...data.releases.map((r) => ({ id: r.id as number | null, name: r.name })),
-    { id: null, name: "Unassigned" },
-  ];
-
-  // Group stories by (task_id, release_id)
-  const getStories = (taskId: number, releaseId: number | null): StoryData[] => {
-    return allStories.filter(
-      (s) =>
-        s.task_id === taskId &&
-        (releaseId === null ? s.release_id === null : s.release_id === releaseId),
-    );
-  };
-
   // Group tasks by activity for spanning headers
   const activitySpans: Array<{ id: number; shortId: string; title: string; span: number }> = [];
   for (const a of data.activities) {
@@ -107,11 +66,10 @@ export function StoryMap({ data }: { data: MapData }) {
       <div
         className="map-grid"
         style={{
-          gridTemplateColumns: `120px repeat(${allTasks.length}, minmax(220px, 1fr)) 100px`,
+          gridTemplateColumns: `repeat(${allTasks.length}, minmax(220px, 1fr)) 100px`,
         }}
       >
         {/* Activity header row */}
-        <div className="grid-corner" />
         {activitySpans.map((a) => (
           <div
             key={a.id}
@@ -138,7 +96,6 @@ export function StoryMap({ data }: { data: MapData }) {
         </div>
 
         {/* Task header row */}
-        <div className="grid-label">Tasks</div>
         {allTasks.map((t) => (
           <div key={t.id} className="task-header">
             <span className="task-id">{t.shortId}</span>
@@ -158,57 +115,21 @@ export function StoryMap({ data }: { data: MapData }) {
         ))}
         <div />
 
-        {/* Release swimlane rows */}
-        {releaseRows.map((release) => (
-          <>
-            <div key={`label-${release.id}`} className="release-label">
-              {release.name}
-            </div>
-            {allTasks.map((task) => (
-              <div
-                key={`cell-${task.id}-${release.id}`}
-                className="map-cell"
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  e.currentTarget.classList.add("map-cell--dragover");
-                }}
-                onDragLeave={(e) => {
-                  e.currentTarget.classList.remove("map-cell--dragover");
-                }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  e.currentTarget.classList.remove("map-cell--dragover");
-                  const storyId = Number(e.dataTransfer.getData("storyId"));
-                  if (storyId) handleDropStory(storyId, release.id);
-                }}
-              >
-                {getStories(task.id, release.id).map((story) => (
-                  <StoryCard
-                    key={story.id}
-                    story={story}
-                    releases={data.releases}
-                  />
-                ))}
-              </div>
+        {/* Stories row — one cell per task */}
+        {allTasks.map((task) => (
+          <div key={`cell-${task.id}`} className="map-cell">
+            {task.stories.map((story) => (
+              <StoryCard key={story.id} story={story} />
             ))}
-            <div key={`end-${release.id}`} />
-          </>
-        ))}
-
-        {/* Add story row per task */}
-        <div className="grid-label">Add</div>
-        {allTasks.map((t) => (
-          <div key={`add-${t.id}`} className="map-cell map-cell--add">
             <AddForm
               placeholder="Story"
-              onAdd={(title) => handleAddStory(t.id, title)}
+              onAdd={(title) => handleAddStory(task.id, title)}
             />
           </div>
         ))}
         <div />
 
         {/* Add task row per activity */}
-        <div className="grid-label" />
         {data.activities.map((a) => (
           <div
             key={`add-task-${a.id}`}
@@ -222,11 +143,6 @@ export function StoryMap({ data }: { data: MapData }) {
           </div>
         ))}
         <div />
-      </div>
-
-      {/* Add release */}
-      <div className="release-add">
-        <AddForm placeholder="Add release" onAdd={handleAddRelease} />
       </div>
     </div>
   );

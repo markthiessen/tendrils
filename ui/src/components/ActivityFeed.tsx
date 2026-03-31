@@ -1,8 +1,7 @@
 import type { LogEntry } from "../hooks/useActivityFeed";
 
 function formatEntity(entry: LogEntry): string {
-  const prefix = entry.entity_type === "bug" ? "B" : "S";
-  return `${prefix}${entry.entity_id}`;
+  return `S${entry.entity_id}`;
 }
 
 export function ActivityFeed({ entries }: { entries: LogEntry[] }) {

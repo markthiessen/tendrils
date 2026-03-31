@@ -1,64 +1,29 @@
 import type { Command } from "commander";
-import { resolveProject } from "../config/binding.js";
-import { getDb } from "../db/index.js";
 import { findAllActivities } from "../db/activity.js";
 import { findAllTasks } from "../db/task.js";
 import { findAllStories } from "../db/story.js";
-import { findAllBugs } from "../db/bug.js";
-import { findAllReleases } from "../db/release.js";
-import { findReleaseByName } from "../db/release.js";
 import {
   formatActivityId,
   formatTaskId,
   formatStoryId,
-  formatBugId,
 } from "../model/id.js";
 import { findDependencies } from "../db/dependency.js";
-import { NotFoundError } from "../errors.js";
-import {
-  outputSuccess,
-  renderTable,
-  type OutputContext,
-} from "../output/index.js";
-
-function getCtx(program: Command): OutputContext {
-  return {
-    json: program.opts().json ?? false,
-    quiet: program.opts().quiet ?? false,
-  };
-}
-
-function resolveDb(program: Command) {
-  const resolved = resolveProject(program.opts().project);
-  return getDb(resolved.slug);
-}
+import { outputSuccess } from "../output/index.js";
+import { getCtx, resolveDb } from "./util.js";
 
 export function registerMapCommand(program: Command): void {
   // td map
   program
     .command("map")
     .description("Render the story map")
-    .option("-r, --release <name>", "Filter by release")
     .option("--export <format>", "Export format (json)")
-    .action((opts: { release?: string; export?: string }) => {
+    .action((opts: { export?: string }) => {
       const ctx = getCtx(program);
       const db = resolveDb(program);
 
       const activities = findAllActivities(db);
       const tasks = findAllTasks(db);
-      const releases = findAllReleases(db);
-      const bugs = findAllBugs(db);
-
-      let releaseFilter: number | undefined;
-      if (opts.release) {
-        const rel = findReleaseByName(db, opts.release);
-        if (!rel) throw new NotFoundError("release", opts.release);
-        releaseFilter = rel.id;
-      }
-
-      const stories = findAllStories(db, {
-        releaseId: releaseFilter,
-      });
+      const stories = findAllStories(db);
 
       // Build dependency lookup: storyId -> list of depends-on shortIds
       const depMap = new Map<number, string[]>();
@@ -93,7 +58,6 @@ export function registerMapCommand(program: Command): void {
                 id: formatStoryId(a.id, t.id, s.id),
                 title: s.title,
                 status: s.status,
-                release_id: s.release_id,
                 claimed_by: s.claimed_by,
                 estimate: s.estimate,
                 depends_on: depMap.get(s.id) ?? [],
@@ -103,27 +67,8 @@ export function registerMapCommand(program: Command): void {
         };
       });
 
-      const bugData = (releaseFilter
-        ? bugs.filter((b) => b.release_id === releaseFilter)
-        : bugs
-      ).map((b) => ({
-        id: formatBugId(b.id),
-        title: b.title,
-        severity: b.severity,
-        status: b.status,
-        claimed_by: b.claimed_by,
-      }));
-
       if (opts.export === "json") {
-        const exportData = {
-          activities: mapData,
-          bugs: bugData,
-          releases: releases.map((r) => ({
-            name: r.name,
-            status: r.status,
-          })),
-        };
-        console.log(JSON.stringify(exportData, null, 2));
+        console.log(JSON.stringify({ activities: mapData }, null, 2));
         return;
       }
 
@@ -131,7 +76,7 @@ export function registerMapCommand(program: Command): void {
       const lines: string[] = [];
 
       if (activities.length === 0) {
-        outputSuccess(ctx, { activities: [], bugs: [] }, "Story map is empty. Add activities with 'td activity add'.");
+        outputSuccess(ctx, { activities: [] }, "Story map is empty. Add activities with 'td activity add'.");
         return;
       }
 
@@ -154,50 +99,24 @@ export function registerMapCommand(program: Command): void {
         lines.push("");
       }
 
-      if (bugData.length > 0) {
-        lines.push("=== BUGS ===\n");
-        for (const b of bugData) {
-          const status = bugStatusIcon(b.status);
-          const claimed = b.claimed_by ? ` @${b.claimed_by}` : "";
-          lines.push(`  ${status} ${b.id} [${b.severity}] ${b.title}${claimed}`);
-        }
-        lines.push("");
-      }
-
-      outputSuccess(ctx, { activities: mapData, bugs: bugData }, lines.join("\n"));
+      outputSuccess(ctx, { activities: mapData }, lines.join("\n"));
     });
 
   // td stats
   program
     .command("stats")
     .description("Show story map statistics")
-    .option("-r, --release <name>", "Filter by release")
-    .action((opts: { release?: string }) => {
+    .action(() => {
       const ctx = getCtx(program);
       const db = resolveDb(program);
 
-      let releaseFilter: number | undefined;
-      if (opts.release) {
-        const rel = findReleaseByName(db, opts.release);
-        if (!rel) throw new NotFoundError("release", opts.release);
-        releaseFilter = rel.id;
-      }
-
       const activities = findAllActivities(db);
       const tasks = findAllTasks(db);
-      const stories = findAllStories(db, { releaseId: releaseFilter });
-      const bugs = releaseFilter
-        ? findAllBugs(db, { releaseId: releaseFilter })
-        : findAllBugs(db);
+      const stories = findAllStories(db);
 
       const storyCounts: Record<string, number> = {};
       for (const s of stories) {
         storyCounts[s.status] = (storyCounts[s.status] ?? 0) + 1;
-      }
-
-      const bugCounts: Record<string, number> = {};
-      for (const b of bugs) {
-        bugCounts[b.status] = (bugCounts[b.status] ?? 0) + 1;
       }
 
       const data = {
@@ -207,10 +126,6 @@ export function registerMapCommand(program: Command): void {
           total: stories.length,
           ...storyCounts,
         },
-        bugs: {
-          total: bugs.length,
-          ...bugCounts,
-        },
       };
 
       const lines: string[] = [];
@@ -219,10 +134,6 @@ export function registerMapCommand(program: Command): void {
       lines.push(`Tasks:      ${tasks.length}`);
       lines.push(`Stories:    ${stories.length}`);
       for (const [status, count] of Object.entries(storyCounts)) {
-        lines.push(`  ${status}: ${count}`);
-      }
-      lines.push(`Bugs:       ${bugs.length}`);
-      for (const [status, count] of Object.entries(bugCounts)) {
         lines.push(`  ${status}: ${count}`);
       }
 
@@ -241,20 +152,5 @@ function statusIcon(status: string): string {
     case "done": return "[x]";
     case "cancelled": return "[-]";
     default: return "[ ]";
-  }
-}
-
-function bugStatusIcon(status: string): string {
-  switch (status) {
-    case "reported": return "[R]";
-    case "confirmed": return "[C]";
-    case "claimed": return "[*]";
-    case "in-progress": return "[>]";
-    case "blocked": return "[!]";
-    case "fixed": return "[F]";
-    case "verified": return "[V]";
-    case "wont-fix": return "[-]";
-    case "cancelled": return "[-]";
-    default: return "[R]";
   }
 }

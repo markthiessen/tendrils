@@ -1,33 +1,28 @@
 import { useState, useEffect, useCallback } from "react";
 import { get, type Envelope } from "../api/client";
+import type { DecisionData } from "./useDecisions";
 import { useEventSource } from "./useEventSource";
 
-export interface DecisionData {
-  id: number;
-  title: string;
-  context_type: string | null;
-  context_id: number | null;
-  tags: string;
-  agent: string | null;
-  created_at: string;
-}
-
 const DECISION_EVENTS = [
-  "decision.created", "decision.deleted", "workspace.switched", "repo.switched",
+  "decision.created", "decision.deleted",
 ];
 
-export function useDecisions() {
+export function useRepoDecisions(repoPath: string | null) {
   const [decisions, setDecisions] = useState<DecisionData[]>([]);
 
   const refresh = useCallback(async () => {
-    const result = await get<Envelope<DecisionData[]>>("/api/decisions");
+    if (!repoPath) {
+      setDecisions([]);
+      return;
+    }
+    const result = await get<Envelope<DecisionData[]>>(
+      `/api/decisions/by-repo?repoPath=${encodeURIComponent(repoPath)}`,
+    );
     if (result.ok) setDecisions(result.data);
-  }, []);
+  }, [repoPath]);
 
   useEffect(() => {
     refresh();
-    const poll = setInterval(refresh, 5000);
-    return () => clearInterval(poll);
   }, [refresh]);
 
   useEventSource(DECISION_EVENTS, refresh);

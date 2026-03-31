@@ -1,119 +1,104 @@
 import type { Command } from "commander";
 import fs from "node:fs";
 import path from "node:path";
-import { createInterface } from "node:readline";
-import { execSync } from "node:child_process";
 import {
-  getProjectDir,
-  saveProjectConfig,
-  loadProjectConfig,
-  type ProjectConfig,
+  getWorkspaceDir,
+  saveWorkspaceConfig,
+  loadWorkspaceConfig,
+  type WorkspaceConfig,
 } from "../config/index.js";
 import { writeRepoBinding } from "../config/binding.js";
-import { initializeDb } from "../db/index.js";
+import { initializeDb, getDb } from "../db/index.js";
+import { upsertRepo } from "../db/repo.js";
 import { outputSuccess, type OutputContext } from "../output/index.js";
-
-function slugify(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-}
-
-function inferRepoName(): string {
-  // Try git remote name first
-  try {
-    const remote = execSync("git remote get-url origin", { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }).trim();
-    const match = remote.match(/\/([^/]+?)(?:\.git)?$/);
-    if (match) return match[1]!;
-  } catch {
-    // no git remote
-  }
-  // Fall back to directory name
-  return path.basename(process.cwd());
-}
-
-function ask(question: string): Promise<string> {
-  const rl = createInterface({ input: process.stdin, output: process.stderr });
-  return new Promise((resolve) => {
-    rl.question(question, (answer) => {
-      rl.close();
-      resolve(answer.trim());
-    });
-  });
-}
+import { slugify, inferRepoName, ask } from "./util.js";
 
 export function registerInitCommand(program: Command): void {
   program
     .command("init")
-    .description("Initialize a new project or bind current directory to one")
-    .argument("[name]", "Project name")
-    .option("--repo <label>", "Repo role label (e.g. api, web, mobile)")
-    .action(async (name: string | undefined, opts: { repo?: string }) => {
+    .description("Initialize a new workspace or bind current directory to one")
+    .argument("[name]", "Workspace name")
+    .option("--role <label>", "Repo role (e.g. api, web, mobile)")
+    .action(async (name: string | undefined, opts: { role?: string }) => {
       const ctx: OutputContext = {
         json: program.opts().json ?? false,
         quiet: program.opts().quiet ?? false,
       };
 
-      const projectName = name ?? "default";
-      const slug = slugify(projectName);
-      const existing = loadProjectConfig(slug);
+      const workspaceName = name ?? "default";
+      const slug = slugify(workspaceName);
+      const existing = loadWorkspaceConfig(slug);
       const cwd = process.cwd();
+      const repoName = inferRepoName();
 
-      // Resolve repo label — use flag, or prompt interactively
-      let repo = opts.repo;
-      if (!repo && !ctx.json && !ctx.quiet && process.stdin.isTTY) {
-        const repoName = inferRepoName();
-        repo = await ask(`Repo role for '${repoName}' (e.g. api, web, mobile — enter to skip): `);
-        if (!repo) repo = undefined;
+      // Resolve role — use flag, or prompt interactively
+      let role = opts.role;
+      if (!role && !ctx.json && !ctx.quiet && process.stdin.isTTY) {
+        role = await ask(`Role for '${repoName}' (e.g. api, web, mobile — enter to skip): `);
+        if (!role) role = undefined;
       }
 
       if (existing) {
-        addBinding(existing, slug, cwd, repo);
-        saveProjectConfig(slug, existing);
-        writeRepoBinding(cwd, slug, repo);
+        addBinding(existing, cwd, role);
+        saveWorkspaceConfig(slug, existing);
+        initializeDb(slug);
+        upsertRepo(getDb(slug), cwd, repoName, role);
+        writeRepoBinding(cwd, slug, role);
+        ensureGitignore(cwd);
         outputSuccess(
           ctx,
-          { project: slug, bound: cwd, repo: repo ?? null },
-          `Bound current directory to project '${existing.project.name}'.${repo ? ` Repo: ${repo}` : ""}`,
+          { workspace: slug, repo: repoName, bound: cwd, role: role ?? null },
+          `Bound '${repoName}' to workspace '${existing.workspace.name}'.${role ? ` Role: ${role}` : ""}`,
         );
         return;
       }
 
-      const config: ProjectConfig = {
-        project: {
-          name: projectName,
-          slug,
+      const config: WorkspaceConfig = {
+        workspace: {
+          name: workspaceName,
           created_at: new Date().toISOString(),
         },
-        bindings: [{ path: cwd, repo }],
+        bindings: [{ path: cwd, role }],
       };
 
-      saveProjectConfig(slug, config);
+      saveWorkspaceConfig(slug, config);
       initializeDb(slug);
-      writeRepoBinding(cwd, slug, repo);
+      upsertRepo(getDb(slug), cwd, repoName, role);
+      writeRepoBinding(cwd, slug, role);
+      ensureGitignore(cwd);
 
       outputSuccess(
         ctx,
-        { project: slug, path: getProjectDir(slug), bound: cwd, repo: repo ?? null },
-        `Project '${projectName}' created.${repo ? ` Repo: ${repo}.` : ""} Database: ${getProjectDir(slug)}/map.db`,
+        { workspace: slug, repo: repoName, path: getWorkspaceDir(slug), bound: cwd, role: role ?? null },
+        `Workspace '${workspaceName}' created. Repo: ${repoName}${role ? ` (${role})` : ""}`,
       );
     });
 }
 
+export function ensureGitignore(dir: string): void {
+  const gitignorePath = path.join(dir, ".gitignore");
+  const entry = ".tendrils/";
+  if (fs.existsSync(gitignorePath)) {
+    const content = fs.readFileSync(gitignorePath, "utf-8");
+    if (content.split("\n").some((line) => line.trim() === entry)) return;
+    fs.appendFileSync(gitignorePath, `\n${entry}\n`);
+  } else {
+    fs.writeFileSync(gitignorePath, `${entry}\n`, "utf-8");
+  }
+}
+
 function addBinding(
-  config: ProjectConfig,
-  _slug: string,
+  config: WorkspaceConfig,
   dir: string,
-  repo?: string,
+  role?: string,
 ): void {
   if (!config.bindings) {
     config.bindings = [];
   }
   const existing = config.bindings.find((b) => b.path === dir);
   if (existing) {
-    if (repo) existing.repo = repo;
+    if (role) existing.role = role;
   } else {
-    config.bindings.push({ path: dir, repo });
+    config.bindings.push({ path: dir, role });
   }
 }

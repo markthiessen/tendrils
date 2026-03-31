@@ -8,13 +8,12 @@ import { emit } from "../sse.js";
 import type { ServerContext } from "../context.js";
 
 export function registerStoryRoutes(app: FastifyInstance, ctx: ServerContext) {
-  app.get<{ Querystring: { taskId?: string; status?: string; releaseId?: string; claimedBy?: string } }>("/api/stories", (req) => {
+  app.get<{ Querystring: { taskId?: string; status?: string; claimedBy?: string } }>("/api/stories", (req) => {
     return {
       ok: true,
       data: findAllStories(ctx.db, {
         taskId: req.query.taskId ? Number(req.query.taskId) : undefined,
         status: req.query.status,
-        releaseId: req.query.releaseId ? Number(req.query.releaseId) : undefined,
         claimedBy: req.query.claimedBy,
       }),
     };
@@ -26,16 +25,15 @@ export function registerStoryRoutes(app: FastifyInstance, ctx: ServerContext) {
     return { ok: true, data: s };
   });
 
-  app.post<{ Body: { taskId: number; title: string; description?: string; releaseId?: number; estimate?: string } }>("/api/stories", (req) => {
+  app.post<{ Body: { taskId: number; title: string; description?: string; estimate?: string } }>("/api/stories", (req) => {
     const s = insertStory(ctx.db, req.body.taskId, req.body.title, req.body.description ?? "", {
-      releaseId: req.body.releaseId,
       estimate: req.body.estimate,
     });
     emit("story.created", s);
     return { ok: true, data: s };
   });
 
-  app.put<{ Params: { id: string }; Body: { title?: string; description?: string; releaseId?: number | null; estimate?: string | null } }>("/api/stories/:id", (req) => {
+  app.put<{ Params: { id: string }; Body: { title?: string; description?: string; estimate?: string | null } }>("/api/stories/:id", (req) => {
     const s = updateStory(ctx.db, Number(req.params.id), req.body);
     if (!s) return { ok: false, error: { code: "NOT_FOUND", message: "Story not found" } };
     emit("story.updated", s);

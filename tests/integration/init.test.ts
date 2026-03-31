@@ -37,37 +37,37 @@ afterEach(() => {
 });
 
 describe("td init", () => {
-  it("creates a new project", () => {
+  it("creates a new workspace", () => {
     const output = td(["init", "my-project"]);
-    expect(output).toContain("Project 'my-project' created");
+    expect(output).toContain("Workspace 'my-project' created");
 
     // Check files were created
     expect(
-      fs.existsSync(path.join(testHome, "projects", "my-project", "map.db")),
+      fs.existsSync(path.join(testHome, "workspaces", "my-project", "map.db")),
     ).toBe(true);
     expect(
-      fs.existsSync(path.join(testHome, "projects", "my-project", "config.toml")),
+      fs.existsSync(path.join(testHome, "workspaces", "my-project", "config.toml")),
     ).toBe(true);
-    expect(fs.existsSync(path.join(testCwd, ".tendrils.toml"))).toBe(true);
+    expect(fs.existsSync(path.join(testCwd, ".tendrils", "config.toml"))).toBe(true);
 
     // Check binding content
     const binding = fs.readFileSync(
-      path.join(testCwd, ".tendrils.toml"),
+      path.join(testCwd, ".tendrils", "config.toml"),
       "utf-8",
     );
-    expect(binding).toContain('project = "my-project"');
+    expect(binding).toContain('workspace = "my-project"');
   });
 
   it("returns JSON on --json", () => {
     const result = tdJson(["init", "my-project"]) as {
       ok: boolean;
-      data: { project: string };
+      data: { workspace: string };
     };
     expect(result.ok).toBe(true);
-    expect(result.data.project).toBe("my-project");
+    expect(result.data.workspace).toBe("my-project");
   });
 
-  it("binds to existing project on second init", () => {
+  it("binds to existing workspace on second init", () => {
     td(["init", "my-project"]);
 
     // Init from a different directory
@@ -76,7 +76,7 @@ describe("td init", () => {
     );
     try {
       const output = td(["init", "my-project"], { cwd: otherCwd });
-      expect(output).toContain("Bound current directory");
+      expect(output).toContain("to workspace 'my-project'");
     } finally {
       fs.rmSync(otherCwd, { recursive: true, force: true });
     }
@@ -85,16 +85,16 @@ describe("td init", () => {
   it("uses 'default' when no name given", () => {
     const result = tdJson(["init"]) as {
       ok: boolean;
-      data: { project: string };
+      data: { workspace: string };
     };
     expect(result.ok).toBe(true);
-    expect(result.data.project).toBe("default");
+    expect(result.data.workspace).toBe("default");
   });
 });
 
-describe("td project list", () => {
-  it("shows empty list when no projects", () => {
-    const result = tdJson(["project", "list"]) as {
+describe("td workspace list", () => {
+  it("shows empty list when no workspaces", () => {
+    const result = tdJson(["workspace", "list"]) as {
       ok: boolean;
       data: unknown[];
     };
@@ -102,29 +102,28 @@ describe("td project list", () => {
     expect(result.data).toEqual([]);
   });
 
-  it("lists created projects", () => {
+  it("lists created workspaces", () => {
     td(["init", "my-project"]);
     td(["init", "other-project"]);
-    const result = tdJson(["project", "list"]) as {
+    const result = tdJson(["workspace", "list"]) as {
       ok: boolean;
-      data: Array<{ slug: string; name: string }>;
+      data: Array<{ name: string }>;
     };
     expect(result.ok).toBe(true);
     expect(result.data).toHaveLength(2);
-    const slugs = result.data.map((p) => p.slug).sort();
-    expect(slugs).toEqual(["my-project", "other-project"]);
+    const names = result.data.map((w) => w.name).sort();
+    expect(names).toEqual(["my-project", "other-project"]);
   });
 });
 
-describe("td project info", () => {
-  it("shows project details", () => {
+describe("td workspace info", () => {
+  it("shows workspace details", () => {
     td(["init", "my-project"]);
-    const result = tdJson(["project", "info", "my-project"]) as {
+    const result = tdJson(["workspace", "info", "my-project"]) as {
       ok: boolean;
-      data: { slug: string; name: string; bindings: Array<{ path: string }> };
+      data: { name: string; bindings: Array<{ path: string }> };
     };
     expect(result.ok).toBe(true);
-    expect(result.data.slug).toBe("my-project");
     expect(result.data.name).toBe("my-project");
     expect(result.data.bindings).toHaveLength(1);
   });

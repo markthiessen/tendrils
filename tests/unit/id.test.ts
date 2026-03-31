@@ -4,7 +4,6 @@ import {
   formatActivityId,
   formatTaskId,
   formatStoryId,
-  formatBugId,
   formatFullId,
 } from "../../src/model/id.js";
 
@@ -31,11 +30,6 @@ describe("parseId", () => {
     });
   });
 
-  it("parses bug ID", () => {
-    expect(parseId("B001")).toEqual({ bug: 1, type: "bug" });
-    expect(parseId("B123")).toEqual({ bug: 123, type: "bug" });
-  });
-
   it("parses project-qualified ID", () => {
     expect(parseId("MyProject::A01.T02.S001")).toEqual({
       project: "MyProject",
@@ -44,11 +38,6 @@ describe("parseId", () => {
       story: 1,
       type: "story",
     });
-    expect(parseId("my-project::B042")).toEqual({
-      project: "my-project",
-      bug: 42,
-      type: "bug",
-    });
   });
 
   it("throws on invalid ID", () => {
@@ -56,7 +45,7 @@ describe("parseId", () => {
     expect(() => parseId("X01")).toThrow("Invalid ID");
     expect(() => parseId("A")).toThrow("Invalid ID");
     expect(() => parseId("A01.S001")).toThrow("Invalid ID");
-    expect(() => parseId("A01.T02.B001")).toThrow("Invalid ID");
+    expect(() => parseId("B001")).toThrow("Invalid ID");
   });
 });
 
@@ -77,13 +66,6 @@ describe("formatStoryId", () => {
   it("formats with 3-digit padding", () => {
     expect(formatStoryId(1, 2, 3)).toBe("A01.T02.S003");
     expect(formatStoryId(1, 2, 100)).toBe("A01.T02.S100");
-  });
-});
-
-describe("formatBugId", () => {
-  it("formats with 3-digit padding", () => {
-    expect(formatBugId(1)).toBe("B001");
-    expect(formatBugId(42)).toBe("B042");
   });
 });
 

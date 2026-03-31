@@ -2,142 +2,141 @@ import fs from "node:fs";
 import path from "node:path";
 import TOML from "toml";
 import {
-  getTendrilsHome,
-  getProjectsDir,
-  loadProjectConfig,
+  getWorkspacesDir,
+  loadWorkspaceConfig,
 } from "./index.js";
-import { NoProjectError } from "../errors.js";
+import { NoWorkspaceError } from "../errors.js";
 import type { RepoBinding } from "./index.js";
 
-export interface ResolvedProject {
-  slug: string;
+export interface ResolvedWorkspace {
   name: string;
   source: string;
-  repo?: string;
+  role?: string;
 }
 
-export function resolveProject(
-  flagProject?: string,
-): ResolvedProject {
-  // 1. --project flag
-  if (flagProject) {
-    const config = loadProjectConfig(flagProject);
+export function resolveWorkspace(
+  flagWorkspace?: string,
+): ResolvedWorkspace {
+  // 1. --workspace flag
+  if (flagWorkspace) {
+    const config = loadWorkspaceConfig(flagWorkspace);
     if (!config) {
-      throw new NoProjectError(`Project '${flagProject}' not found.`);
+      throw new NoWorkspaceError(`Workspace '${flagWorkspace}' not found.`);
     }
     return {
-      slug: config.project.slug,
-      name: config.project.name,
-      source: "--project flag",
+      name: flagWorkspace,
+      source: "--workspace flag",
     };
   }
 
-  // 2. TD_PROJECT env var
-  const envProject = process.env["TD_PROJECT"];
-  if (envProject) {
-    const config = loadProjectConfig(envProject);
+  // 2. TD_WORKSPACE env var
+  const envWorkspace = process.env["TD_WORKSPACE"];
+  if (envWorkspace) {
+    const config = loadWorkspaceConfig(envWorkspace);
     if (!config) {
-      throw new NoProjectError(
-        `Project '${envProject}' (from TD_PROJECT) not found.`,
+      throw new NoWorkspaceError(
+        `Workspace '${envWorkspace}' (from environment) not found.`,
       );
     }
     return {
-      slug: config.project.slug,
-      name: config.project.name,
-      source: "TD_PROJECT env",
+      name: envWorkspace,
+      source: "TD_WORKSPACE env",
     };
   }
 
-  // 3. .tendrils.toml in CWD or parent dirs
+  // 3. .tendrils/ in CWD or parent dirs
   const binding = findRepoBinding(process.cwd());
   if (binding) {
-    const config = loadProjectConfig(binding.project);
+    const config = loadWorkspaceConfig(binding.workspace);
     if (config) {
       return {
-        slug: config.project.slug,
-        name: config.project.name,
-        source: ".tendrils.toml",
-        repo: binding.repo,
+        name: binding.workspace,
+        source: ".tendrils/config.toml",
+        role: binding.role,
       };
     }
   }
 
-  // 4. Binding path match in project configs
+  // 4. Binding path match in workspace configs
   const cwd = process.cwd();
-  const projectSlugs = listProjectSlugs();
-  for (const slug of projectSlugs) {
-    const config = loadProjectConfig(slug);
+  const workspaceNames = listWorkspaceNames();
+  for (const name of workspaceNames) {
+    const config = loadWorkspaceConfig(name);
     if (config?.bindings) {
       for (const b of config.bindings) {
         if (cwd === b.path || cwd.startsWith(b.path + path.sep)) {
           return {
-            slug: config.project.slug,
-            name: config.project.name,
+            name,
             source: "binding path match",
-            repo: b.repo,
+            role: b.role,
           };
         }
       }
     }
   }
 
-  // 5. If exactly one project exists, use it
-  if (projectSlugs.length === 1) {
-    const slug = projectSlugs[0]!;
-    const config = loadProjectConfig(slug);
+  // 5. If exactly one workspace exists, use it
+  if (workspaceNames.length === 1) {
+    const name = workspaceNames[0]!;
+    const config = loadWorkspaceConfig(name);
     if (config) {
       return {
-        slug: config.project.slug,
-        name: config.project.name,
-        source: "only project",
+        name,
+        source: "only workspace",
       };
     }
   }
 
   // 6. Error
-  if (projectSlugs.length === 0) {
-    throw new NoProjectError(
-      "No projects found. Run 'td init --project <name>' to create one.",
+  if (workspaceNames.length === 0) {
+    throw new NoWorkspaceError(
+      "No workspaces found. Run 'td init <name>' to create one.",
     );
   }
-  throw new NoProjectError(
-    `Multiple projects found: ${projectSlugs.join(", ")}. Specify with --project or create a .tendrils.toml file.`,
+  throw new NoWorkspaceError(
+    `Multiple workspaces found: ${workspaceNames.join(", ")}. Specify with --workspace or run 'td init <name>'.`,
   );
 }
 
-function findRepoBinding(startDir: string): RepoBinding | null {
-  let dir = startDir;
+/** Find the repo root directory (containing .tendrils/), or CWD if not found. */
+export function findRepoRoot(startDir?: string): string {
+  let dir = startDir ?? process.cwd();
   const root = path.parse(dir).root;
   while (true) {
-    const bindingPath = path.join(dir, ".tendrils.toml");
-    if (fs.existsSync(bindingPath)) {
-      const raw = fs.readFileSync(bindingPath, "utf-8");
-      const parsed = TOML.parse(raw) as unknown as RepoBinding;
-      if (parsed.project) {
-        return parsed;
-      }
+    if (fs.existsSync(path.join(dir, ".tendrils"))) {
+      return dir;
     }
     const parent = path.dirname(dir);
     if (parent === dir || dir === root) break;
     dir = parent;
   }
-  return null;
+  return startDir ?? process.cwd();
 }
 
-export function listProjectSlugs(): string[] {
-  const projectsDir = getProjectsDir();
-  if (!fs.existsSync(projectsDir)) return [];
+function findRepoBinding(startDir: string): RepoBinding | null {
+  const root = findRepoRoot(startDir);
+  const configPath = path.join(root, ".tendrils", "config.toml");
+  if (!fs.existsSync(configPath)) return null;
+  const parsed = TOML.parse(fs.readFileSync(configPath, "utf-8")) as any;
+  return parsed.workspace ? { workspace: parsed.workspace, role: parsed.role } : null;
+}
+
+export function listWorkspaceNames(): string[] {
+  const workspacesDir = getWorkspacesDir(); // auto-migrates projects/ → workspaces/
+  if (!fs.existsSync(workspacesDir)) return [];
   return fs
-    .readdirSync(projectsDir, { withFileTypes: true })
+    .readdirSync(workspacesDir, { withFileTypes: true })
     .filter((d) => d.isDirectory())
     .map((d) => d.name);
 }
 
-export function writeRepoBinding(dir: string, projectSlug: string, repo?: string): void {
-  const bindingPath = path.join(dir, ".tendrils.toml");
-  let content = `project = "${projectSlug}"\n`;
-  if (repo) {
-    content += `repo = "${repo}"\n`;
+export function writeRepoBinding(dir: string, workspaceName: string, role?: string): void {
+  const tendrilsDir = path.join(dir, ".tendrils");
+  fs.mkdirSync(tendrilsDir, { recursive: true });
+  const bindingPath = path.join(tendrilsDir, "config.toml");
+  let content = `workspace = "${workspaceName}"\n`;
+  if (role) {
+    content += `role = "${role}"\n`;
   }
   fs.writeFileSync(bindingPath, content, "utf-8");
 }

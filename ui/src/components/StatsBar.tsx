@@ -22,9 +22,6 @@ export function StatsBar({ data }: { data: MapData }) {
           {status}: {count}
         </span>
       ))}
-      {data.bugs.length > 0 && (
-        <span className="stat">{data.bugs.length} bugs</span>
-      )}
     </div>
   );
 }

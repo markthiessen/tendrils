@@ -1,37 +1,19 @@
-import type { StoryData, StoryItemData, ReleaseData } from "../hooks/useStoryMap";
+import type { StoryData, StoryItemData } from "../hooks/useStoryMap";
 import { StatusBadge } from "./StatusBadge";
 import { EditableText } from "./EditableText";
 import { put, del, post } from "../api/client";
 
 interface Props {
   story: StoryData;
-  releases: ReleaseData[];
 }
 
-export function StoryCard({ story, releases }: Props) {
+export function StoryCard({ story }: Props) {
   const handleTitleChange = async (title: string) => {
     await put(`/api/stories/${story.id}`, { title });
   };
 
   const handleDescChange = async (description: string) => {
     await put(`/api/stories/${story.id}`, { description });
-  };
-
-  const handleReleaseChange = async (
-    e: React.ChangeEvent<HTMLSelectElement>,
-  ) => {
-    const value = e.target.value;
-    if (value === "") {
-      await post("/api/releases/unassign", { storyId: story.id });
-    } else {
-      const rel = releases.find((r) => r.id === Number(value));
-      if (rel) {
-        await post("/api/releases/assign", {
-          storyId: story.id,
-          releaseName: rel.name,
-        });
-      }
-    }
   };
 
   const handleStatusChange = async (newStatus: string) => {
@@ -77,23 +59,11 @@ export function StoryCard({ story, releases }: Props) {
       {story.claimed_by && (
         <div className="story-claimed">@{story.claimed_by}</div>
       )}
-      <div className="story-meta">
-        <select
-          className="release-select"
-          value={story.release_id ?? ""}
-          onChange={handleReleaseChange}
-        >
-          <option value="">No release</option>
-          {releases.map((r) => (
-            <option key={r.id} value={r.id}>
-              {r.name}
-            </option>
-          ))}
-        </select>
-        {story.estimate && (
+      {story.estimate && (
+        <div className="story-meta">
           <span className="story-estimate">{story.estimate}</span>
-        )}
-      </div>
+        </div>
+      )}
       {story.items.length > 0 && (
         <div className="story-items">
           {story.items.map((item) => (

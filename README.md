@@ -30,7 +30,7 @@ cd your-repo
 td init my-project
 ```
 
-This creates a project database at `~/.tendrils/projects/my-project/map.db` and binds the current directory to it via `.tendrils.toml`.
+This creates a workspace database at `~/.tendrils/workspaces/my-project/map.db` and binds the current directory to it via `.tendrils/config.toml`.
 
 ### 2. Build a story map
 
@@ -138,7 +138,7 @@ cd ~/code/other && td init other_project        # different project
 td --project other_project story list
 ```
 
-Project is resolved in order: `--project` flag, `TD_PROJECT` env var, `.tendrils.toml` in current/parent directory, or auto-detected if only one project exists.
+Workspace is resolved in order: `--workspace` flag, `TD_WORKSPACE` env var, `.tendrils/config.toml` in current/parent directory, or auto-detected if only one workspace exists.
 
 ## JSON Output
 
