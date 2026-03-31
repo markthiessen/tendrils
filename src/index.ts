@@ -5,8 +5,6 @@ import { TendrilsError } from "./errors.js";
 import { errorEnvelope } from "./output/json.js";
 import { registerInitCommand } from "./cli/init.js";
 import { registerWorkspaceCommand } from "./cli/workspace.js";
-import { registerSetWorkspaceCommand } from "./cli/set-workspace.js";
-import { registerSwitchCommand } from "./cli/switch.js";
 import { registerClaudeCommand } from "./cli/claude.js";
 import { registerActivityCommand } from "./cli/activity.js";
 import { registerTaskCommand } from "./cli/task.js";
@@ -32,8 +30,6 @@ program
 // Register commands
 registerInitCommand(program);
 registerWorkspaceCommand(program);
-registerSetWorkspaceCommand(program);
-registerSwitchCommand(program);
 registerClaudeCommand(program);
 registerActivityCommand(program);
 registerTaskCommand(program);

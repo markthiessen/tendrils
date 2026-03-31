@@ -67,7 +67,7 @@ td story items A01.T01.S001 add "Form component with error handling" --role web
 td story items A01.T01.S001 add "Add auth check to proxy middleware" --role analytics-api
 
 # Mark refined stories as ready
-td status A01.T01.S001 ready
+td story status A01.T01.S001 ready
 ```
 
 Every repo that needs to contribute to a story should have at least one checklist item tagged with its role.

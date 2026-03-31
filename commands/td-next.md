@@ -58,8 +58,8 @@ If a next item was found, present it to the user:
 Once the user confirms (or immediately if the item looks straightforward):
 
 ```bash
-td claim <id> --agent claude
-td status <id> in-progress --agent claude
+td story claim <id> --agent claude
+td story status <id> in-progress --agent claude
 td log <id> "Starting work on <repo-role> items" --agent claude
 ```
 
@@ -84,7 +84,7 @@ td story items <id> add "Description of this repo's work" --role <role>
 
 If the story has items for other repos that aren't done yet and your work depends on them, flag this:
 ```bash
-td status <id> blocked --reason "Waiting on <other-repo> items: <description>" --agent claude
+td story status <id> blocked --reason "Waiting on <other-repo> items: <description>" --agent claude
 ```
 
 ### Step 5: Do the work
@@ -110,7 +110,7 @@ td log <id> "[<repo-role>] All items complete" --agent claude
 td story items <id> list
 ```
 
-- If all items across all repos are done → `td status <id> review --agent claude`
+- If all items across all repos are done → `td story status <id> review --agent claude`
 - If only this repo's items are done → leave status as `in-progress` and tell the user which repos still have outstanding items
 
 Present a summary of what was done and what remains across other repos.

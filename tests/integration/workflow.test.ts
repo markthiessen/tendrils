@@ -46,8 +46,8 @@ function setup() {
   td(["task", "add", "A01", "Login"]);
   td(["story", "add", "A01.T01", "Email login"]);
   td(["story", "add", "A01.T01", "OAuth2"]);
-  td(["status", "A01.T01.S001", "ready"]);
-  td(["status", "A01.T01.S002", "ready"]);
+  td(["story", "status", "A01.T01.S001", "ready"]);
+  td(["story", "status", "A01.T01.S002", "ready"]);
 }
 
 beforeEach(() => {
@@ -70,67 +70,67 @@ describe("td next", () => {
   });
 
   it("returns null when nothing ready", () => {
-    td(["status", "A01.T01.S001", "claimed"]);
-    td(["status", "A01.T01.S002", "claimed"]);
+    td(["story", "status", "A01.T01.S001", "claimed"]);
+    td(["story", "status", "A01.T01.S002", "claimed"]);
     const result = tdJson(["next"]);
     expect(result.data).toBeNull();
   });
 
 });
 
-describe("td claim / unclaim", () => {
+describe("td story claim / unclaim", () => {
   it("claims a story", () => {
-    const result = tdJson(["claim", "A01.T01.S001", "--agent", "claude-1"]);
+    const result = tdJson(["story", "claim", "A01.T01.S001", "--agent", "claude-1"]);
     expect(result.data.status).toBe("claimed");
     expect(result.data.claimed_by).toBe("claude-1");
   });
 
   it("is idempotent for same agent", () => {
-    td(["claim", "A01.T01.S001", "--agent", "claude-1"]);
-    const result = tdJson(["claim", "A01.T01.S001", "--agent", "claude-1"]);
+    td(["story", "claim", "A01.T01.S001", "--agent", "claude-1"]);
+    const result = tdJson(["story", "claim", "A01.T01.S001", "--agent", "claude-1"]);
     expect(result.ok).toBe(true);
   });
 
   it("rejects claim by different agent", () => {
-    td(["claim", "A01.T01.S001", "--agent", "claude-1"]);
-    const err = tdFail(["claim", "A01.T01.S001", "--agent", "claude-2"]);
+    td(["story", "claim", "A01.T01.S001", "--agent", "claude-1"]);
+    const err = tdFail(["story", "claim", "A01.T01.S001", "--agent", "claude-2"]);
     expect(err).toContain("already claimed");
   });
 
   it("unclaims a story", () => {
-    td(["claim", "A01.T01.S001", "--agent", "claude-1"]);
-    const result = tdJson(["unclaim", "A01.T01.S001"]);
+    td(["story", "claim", "A01.T01.S001", "--agent", "claude-1"]);
+    const result = tdJson(["story", "unclaim", "A01.T01.S001"]);
     expect(result.data.status).toBe("ready");
     expect(result.data.claimed_by).toBeNull();
   });
 });
 
-describe("td status", () => {
+describe("td story status", () => {
   it("transitions through full lifecycle", () => {
-    td(["claim", "A01.T01.S001", "--agent", "c1"]);
-    td(["status", "A01.T01.S001", "in-progress"]);
-    td(["status", "A01.T01.S001", "review"]);
-    const result = tdJson(["status", "A01.T01.S001", "done"]);
+    td(["story", "claim", "A01.T01.S001", "--agent", "c1"]);
+    td(["story", "status", "A01.T01.S001", "in-progress"]);
+    td(["story", "status", "A01.T01.S001", "review"]);
+    const result = tdJson(["story", "status", "A01.T01.S001", "done"]);
     expect(result.data.status).toBe("done");
   });
 
   it("rejects invalid transitions", () => {
-    const err = tdFail(["status", "A01.T01.S001", "done"]);
+    const err = tdFail(["story", "status", "A01.T01.S001", "done"]);
     expect(err).toContain("Invalid story status transition");
   });
 
   it("is idempotent", () => {
-    td(["claim", "A01.T01.S001"]);
-    td(["status", "A01.T01.S001", "in-progress"]);
-    const result = tdJson(["status", "A01.T01.S001", "in-progress"]);
+    td(["story", "claim", "A01.T01.S001"]);
+    td(["story", "status", "A01.T01.S001", "in-progress"]);
+    const result = tdJson(["story", "status", "A01.T01.S001", "in-progress"]);
     expect(result.ok).toBe(true);
     expect(result.data.status).toBe("in-progress");
   });
 
   it("supports blocked with reason", () => {
-    td(["claim", "A01.T01.S001"]);
-    td(["status", "A01.T01.S001", "in-progress"]);
-    const result = tdJson(["status", "A01.T01.S001", "blocked", "--reason", "Need API key"]);
+    td(["story", "claim", "A01.T01.S001"]);
+    td(["story", "status", "A01.T01.S001", "in-progress"]);
+    const result = tdJson(["story", "status", "A01.T01.S001", "blocked", "--reason", "Need API key"]);
     expect(result.data.status).toBe("blocked");
     expect(result.data.blocked_reason).toBe("Need API key");
   });
@@ -149,8 +149,8 @@ describe("td log / history", () => {
   });
 
   it("includes status changes in history", () => {
-    td(["claim", "A01.T01.S001", "--agent", "c1"]);
-    td(["status", "A01.T01.S001", "in-progress"]);
+    td(["story", "claim", "A01.T01.S001", "--agent", "c1"]);
+    td(["story", "status", "A01.T01.S001", "in-progress"]);
     const result = tdJson(["history", "A01.T01.S001"]);
     expect(result.data.length).toBeGreaterThanOrEqual(3);
     // First entry is the backlog->ready from setup

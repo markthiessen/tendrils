@@ -1,5 +1,6 @@
 import type { Command } from "commander";
 import { resolveWorkspace } from "../config/binding.js";
+import { claimStory, unclaimStory, changeStoryStatus, getAgent } from "./status.js";
 import {
   insertStory,
   findAllStories,
@@ -446,6 +447,40 @@ export function registerStoryCommand(program: Command): void {
       }
 
       outputSuccess(ctx, { dependsOn: depsData, blocks: dependentsData }, lines.join("\n"));
+    });
+
+  story
+    .command("claim")
+    .description("Claim a story")
+    .argument("<id>", "Story ID")
+    .option("-a, --agent <name>", "Agent name")
+    .action((idStr: string, opts: { agent?: string }) => {
+      const ctx = getCtx(program);
+      const db = resolveDb(program);
+      claimStory(ctx, db, parseStoryNum(idStr), getAgent(opts));
+    });
+
+  story
+    .command("unclaim")
+    .description("Release claim on a story")
+    .argument("<id>", "Story ID")
+    .action((idStr: string) => {
+      const ctx = getCtx(program);
+      const db = resolveDb(program);
+      unclaimStory(ctx, db, parseStoryNum(idStr));
+    });
+
+  story
+    .command("status")
+    .description("Change status of a story")
+    .argument("<id>", "Story ID")
+    .argument("<new-status>", "New status")
+    .option("--reason <text>", "Reason (for blocked status)")
+    .option("-a, --agent <name>", "Agent name")
+    .action((idStr: string, newStatus: string, opts: { reason?: string; agent?: string }) => {
+      const ctx = getCtx(program);
+      const db = resolveDb(program);
+      changeStoryStatus(ctx, db, parseStoryNum(idStr), newStatus, getAgent(opts), opts.reason);
     });
 }
 
