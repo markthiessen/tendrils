@@ -34,7 +34,7 @@ export function registerWorkspaceCommand(program: Command): void {
         return {
           name,
           bindings: config?.bindings?.length ?? 0,
-          created_at: config?.workspace.created_at ?? "",
+          created_at: config?.workspace?.created_at ?? "",
         };
       });
 
