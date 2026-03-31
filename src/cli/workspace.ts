@@ -138,7 +138,7 @@ function showWorkspaceInfo(ctx: OutputContext, name: string): void {
     },
     renderKeyValue([
       ["Name", wsName],
-      ["Created", config.workspace.created_at],
+      ["Created", wsCreated],
       [
         "Bindings",
         config.bindings?.map((b) => b.path).join("\n") || "none",
