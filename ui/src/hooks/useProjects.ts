@@ -1,11 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { get, post, type Envelope } from "../api/client";
+import { useEventSource } from "./useEventSource";
 
 export interface ProjectInfo {
   slug: string;
   name: string;
   active: boolean;
 }
+
+const PROJECT_EVENTS = ["project.switched"];
 
 export function useProjects() {
   const [projects, setProjects] = useState<ProjectInfo[]>([]);
@@ -18,11 +21,9 @@ export function useProjects() {
 
   useEffect(() => {
     refresh();
-
-    const es = new EventSource("/events");
-    es.addEventListener("project.switched", () => refresh());
-    return () => es.close();
   }, [refresh]);
+
+  useEventSource(PROJECT_EVENTS, refresh);
 
   const switchProject = useCallback(async (slug: string) => {
     setSwitching(true);

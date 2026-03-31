@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { get, type Envelope } from "../api/client";
+import { useEventSource } from "./useEventSource";
 
 export interface LogEntry {
   id: number;
@@ -12,6 +13,10 @@ export interface LogEntry {
   created_at: string;
 }
 
+const FEED_EVENTS = [
+  "log.created", "story.updated", "bug.updated", "project.switched",
+];
+
 export function useActivityFeed() {
   const [entries, setEntries] = useState<LogEntry[]>([]);
 
@@ -22,15 +27,11 @@ export function useActivityFeed() {
 
   useEffect(() => {
     refresh();
-
-    const es = new EventSource("/events");
-    es.addEventListener("log.created", () => refresh());
-    es.addEventListener("story.updated", () => refresh());
-    es.addEventListener("bug.updated", () => refresh());
-    es.addEventListener("project.switched", () => refresh());
-
-    return () => es.close();
+    const poll = setInterval(refresh, 5000);
+    return () => clearInterval(poll);
   }, [refresh]);
+
+  useEventSource(FEED_EVENTS, refresh);
 
   return { entries, refresh };
 }

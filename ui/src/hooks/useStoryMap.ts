@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { get, type Envelope } from "../api/client";
+import { useEventSource } from "./useEventSource";
 
 export interface StoryItemData {
   id: number;
@@ -62,6 +63,16 @@ export interface MapData {
   releases: ReleaseData[];
 }
 
+const MAP_EVENTS = [
+  "story.created", "story.updated", "story.deleted",
+  "activity.created", "activity.updated", "activity.deleted",
+  "task.created", "task.updated", "task.deleted",
+  "bug.created", "bug.updated", "bug.deleted",
+  "release.created", "release.updated", "release.deleted",
+  "decision.created", "decision.deleted",
+  "project.switched",
+];
+
 export function useStoryMap() {
   const [data, setData] = useState<MapData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -74,31 +85,11 @@ export function useStoryMap() {
 
   useEffect(() => {
     refresh();
-
-    const es = new EventSource("/events");
-    es.onmessage = () => refresh();
-    es.addEventListener("story.created", () => refresh());
-    es.addEventListener("story.updated", () => refresh());
-    es.addEventListener("story.deleted", () => refresh());
-    es.addEventListener("activity.created", () => refresh());
-    es.addEventListener("activity.updated", () => refresh());
-    es.addEventListener("activity.deleted", () => refresh());
-    es.addEventListener("task.created", () => refresh());
-    es.addEventListener("task.updated", () => refresh());
-    es.addEventListener("task.deleted", () => refresh());
-    es.addEventListener("bug.created", () => refresh());
-    es.addEventListener("bug.updated", () => refresh());
-    es.addEventListener("bug.deleted", () => refresh());
-    es.addEventListener("release.created", () => refresh());
-    es.addEventListener("release.updated", () => refresh());
-    es.addEventListener("release.deleted", () => refresh());
-    es.addEventListener("project.switched", () => {
-      setLoading(true);
-      refresh();
-    });
-
-    return () => es.close();
+    const poll = setInterval(refresh, 5000);
+    return () => clearInterval(poll);
   }, [refresh]);
+
+  useEventSource(MAP_EVENTS, refresh);
 
   return { data, loading, refresh };
 }
