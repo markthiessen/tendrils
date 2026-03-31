@@ -7,7 +7,11 @@ import { outputSuccess, type OutputContext } from "../output/index.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const COMMAND_FILES = ["td-discover.md", "td-plan.md", "td-status.md"];
+function getCommandFiles(): string[] {
+  const src = getCommandsSource();
+  if (!fs.existsSync(src)) return [];
+  return fs.readdirSync(src).filter((f) => f.startsWith("td-") && f.endsWith(".md"));
+}
 
 function getCommandsSource(): string {
   return path.resolve(__dirname, "..", "..", "commands");
@@ -27,7 +31,7 @@ function installCommands(global: boolean): string[] {
   const commandsSource = getCommandsSource();
   const installed: string[] = [];
 
-  for (const file of COMMAND_FILES) {
+  for (const file of getCommandFiles()) {
     const src = path.join(commandsSource, file);
     const dest = path.join(commandsTarget, file);
     if (fs.existsSync(src)) {
@@ -43,7 +47,7 @@ function removeCommands(global: boolean): string[] {
   const commandsDir = getCommandsTarget(global);
   const removed: string[] = [];
 
-  for (const file of COMMAND_FILES) {
+  for (const file of getCommandFiles()) {
     const filePath = path.join(commandsDir, file);
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
@@ -58,7 +62,7 @@ function listInstalledCommands(global: boolean): string[] {
   const commandsDir = getCommandsTarget(global);
   const found: string[] = [];
 
-  for (const file of COMMAND_FILES) {
+  for (const file of getCommandFiles()) {
     if (fs.existsSync(path.join(commandsDir, file))) {
       found.push(file);
     }
@@ -141,7 +145,7 @@ export function registerClaudeCommand(program: Command): void {
 
       outputSuccess(
         ctx,
-        { global: globalInstalled, local: localInstalled, available: COMMAND_FILES },
+        { global: globalInstalled, local: localInstalled, available: getCommandFiles() },
         lines.join("\n"),
       );
     });
