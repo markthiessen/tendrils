@@ -1,6 +1,7 @@
 import type { Command } from "commander";
-import { resolveWorkspace } from "../config/binding.js";
+import { resolveWorkspace, findRepoRoot } from "../config/binding.js";
 import { getDb } from "../db/index.js";
+import { findAllRepos } from "../db/repo.js";
 import { findStoryById } from "../db/story.js";
 import { findTaskById } from "../db/task.js";
 import { insertLogEntry } from "../db/log.js";
@@ -11,7 +12,6 @@ import {
 } from "../db/dependency.js";
 import {
   formatStoryId,
-  parseId,
 } from "../model/id.js";
 import {
   validateStoryTransition,
@@ -19,14 +19,61 @@ import {
 } from "../model/status.js";
 import type { StoryStatus } from "../model/types.js";
 import { NotFoundError, ConflictError, InvalidArgumentError } from "../errors.js";
-import { outputSuccess, type OutputContext } from "../output/index.js";
+import { outputSuccess, renderKeyValue, type OutputContext } from "../output/index.js";
 import { getCtx, resolveDb } from "./util.js";
 
-function getAgent(opts: { agent?: string }): string | undefined {
+export function getAgent(opts: { agent?: string }): string | undefined {
   return opts.agent ?? process.env["TD_AGENT"] ?? undefined;
 }
 
 export function registerWorkflowCommands(program: Command): void {
+  // td status — show current repo configuration
+  program
+    .command("status")
+    .description("Show current repo and workspace configuration")
+    .action(() => {
+      const ctx = getCtx(program);
+
+      let resolved;
+      try {
+        resolved = resolveWorkspace(program.opts().workspace);
+      } catch {
+        outputSuccess(ctx, { workspace: null }, "No workspace configured. Run 'td init <name>' to get started.");
+        return;
+      }
+
+      const db = getDb(resolved.name);
+      const repoRoot = findRepoRoot();
+      const repos = findAllRepos(db);
+      const currentRepo = repos.find((r) => r.path === repoRoot);
+
+      const data = {
+        workspace: resolved.name,
+        repo: currentRepo?.name ?? null,
+        role: currentRepo?.role ?? resolved.role ?? null,
+        path: repoRoot,
+        repos: repos.map((r) => ({ name: r.name, role: r.role, path: r.path })),
+      };
+
+      if (ctx.json) {
+        outputSuccess(ctx, data, "");
+        return;
+      }
+
+      const rows: [string, string][] = [
+        ["Workspace", resolved.name],
+        ["Repo", currentRepo?.name ?? "(unknown)"],
+        ["Role", currentRepo?.role ?? "(none)"],
+        ["Path", repoRoot],
+      ];
+
+      if (repos.length > 1) {
+        rows.push(["Repos", repos.map((r) => `${r.name}${r.role ? ` (${r.role})` : ""}`).join(", ")]);
+      }
+
+      outputSuccess(ctx, data, renderKeyValue(rows));
+    });
+
   // td next
   program
     .command("next")
@@ -95,96 +142,31 @@ export function registerWorkflowCommands(program: Command): void {
       outputSuccess(ctx, null, "Nothing ready to work on.");
     });
 
-  // td claim
-  program
-    .command("claim")
-    .description("Claim a story")
-    .argument("<id>", "Story ID")
-    .option("-a, --agent <name>", "Agent name")
-    .action((idStr: string, opts: { agent?: string }) => {
-      const ctx = getCtx(program);
-      const db = resolveDb(program);
-      const agent = getAgent(opts);
-      const parsed = parseId(idStr);
-
-      if (parsed.type !== "story") {
-        throw new InvalidArgumentError("Can only claim stories (e.g. A01.T01.S001).");
-      }
-      claimStory(ctx, db, parsed.story!, agent);
-    });
-
-  // td unclaim
-  program
-    .command("unclaim")
-    .description("Release claim on a story")
-    .argument("<id>", "Story ID")
-    .action((idStr: string) => {
-      const ctx = getCtx(program);
-      const db = resolveDb(program);
-      const parsed = parseId(idStr);
-
-      if (parsed.type !== "story") {
-        throw new InvalidArgumentError("Can only unclaim stories (e.g. A01.T01.S001).");
-      }
-      unclaimStory(ctx, db, parsed.story!);
-    });
-
-  // td status
-  program
-    .command("status")
-    .description("Change status of a story")
-    .argument("<id>", "Story ID")
-    .argument("<new-status>", "New status")
-    .option("--reason <text>", "Reason (for blocked status)")
-    .option("-a, --agent <name>", "Agent name")
-    .action(
-      (
-        idStr: string,
-        newStatus: string,
-        opts: { reason?: string; agent?: string },
-      ) => {
-        const ctx = getCtx(program);
-        const db = resolveDb(program);
-        const agent = getAgent(opts);
-        const parsed = parseId(idStr);
-
-        if (parsed.type !== "story") {
-          throw new InvalidArgumentError(
-            "Can only change status of stories (e.g. A01.T01.S001).",
-          );
-        }
-        changeStoryStatus(ctx, db, parsed.story!, newStatus, agent, opts.reason);
-      },
-    );
 }
 
 /**
  * Find blocked stories where the blocking repo's checklist items are now all
  * done, and move them back to in-progress automatically.
  */
-function autoUnblockStories(
+export function autoUnblockStories(
   db: import("better-sqlite3").Database,
   repo: string,
 ): void {
-  const blocked = db
-    .prepare(
-      `SELECT s.id, s.blocked_reason, t.activity_id, s.task_id
-       FROM stories s
-       JOIN tasks t ON s.task_id = t.id
-       WHERE s.status = 'blocked'
-         AND s.id IN (SELECT DISTINCT story_id FROM story_items)`,
-    )
-    .all() as { id: number; blocked_reason: string | null; activity_id: number; task_id: number }[];
-
-  for (const story of blocked) {
-    const pendingOtherRepo = db
+  db.transaction(() => {
+    const toUnblock = db
       .prepare(
-        `SELECT COUNT(*) as count FROM story_items
-         WHERE story_id = ? AND repo != ? AND done = 0`,
+        `SELECT s.id, t.activity_id, s.task_id
+         FROM stories s
+         JOIN tasks t ON s.task_id = t.id
+         WHERE s.status = 'blocked'
+           AND s.id IN (SELECT DISTINCT story_id FROM story_items)
+           AND s.id NOT IN (
+             SELECT story_id FROM story_items WHERE repo != ? AND done = 0
+           )`,
       )
-      .get(story.id, repo) as { count: number };
+      .all(repo) as { id: number; activity_id: number; task_id: number }[];
 
-    if (pendingOtherRepo.count === 0) {
+    for (const story of toUnblock) {
       db.prepare(
         `UPDATE stories SET status = 'in-progress', blocked_reason = NULL,
          updated_at = datetime('now') WHERE id = ?`,
@@ -196,16 +178,13 @@ function autoUnblockStories(
         undefined, "blocked", "in-progress",
       );
 
-      const ctx: OutputContext = { json: false, quiet: false };
-      if (!ctx.quiet) {
-        const shortId = formatStoryId(story.activity_id, story.task_id, story.id);
-        console.error(`Unblocked ${shortId} — blocking items resolved`);
-      }
+      const shortId = formatStoryId(story.activity_id, story.task_id, story.id);
+      console.error(`Unblocked ${shortId} — blocking items resolved`);
     }
-  }
+  })();
 }
 
-function claimStory(
+export function claimStory(
   ctx: OutputContext,
   db: import("better-sqlite3").Database,
   storyId: number,
@@ -244,7 +223,7 @@ function claimStory(
   outputSuccess(ctx, { ...result, shortId }, `Claimed story ${shortId}.`);
 }
 
-function unclaimStory(
+export function unclaimStory(
   ctx: OutputContext,
   db: import("better-sqlite3").Database,
   storyId: number,
@@ -269,7 +248,7 @@ function unclaimStory(
   outputSuccess(ctx, { ...updated, shortId }, `Unclaimed story ${shortId}.`);
 }
 
-function changeStoryStatus(
+export function changeStoryStatus(
   ctx: OutputContext,
   db: import("better-sqlite3").Database,
   storyId: number,
