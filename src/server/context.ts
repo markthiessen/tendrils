@@ -1,5 +1,5 @@
 import type { Database } from "../db/compat.js";
-import { getDb, getDecisionsDb, initializeDb } from "../db/index.js";
+import { openWorkspaceDb, openDecisionsDb, initializeDb } from "../db/index.js";
 import { loadWorkspaceConfig } from "../config/index.js";
 import { findAllRepos } from "../db/repo.js";
 import { listWorkspaceNames, findRepoRoot } from "../config/binding.js";
@@ -8,8 +8,13 @@ import type { Repo } from "../model/types.js";
 export interface ServerContext {
   name: string;
   repoRoot: string;
-  readonly db: Database;
-  readonly decisionsDb: Database;
+  /**
+   * Short-lived DB access. Opens, runs the callback, then closes.
+   * This ensures the CLI is never blocked by a held connection.
+   */
+  withDb<T>(fn: (db: Database) => T): T;
+  withDecisionsDb<T>(fn: (db: Database) => T): T;
+  withDecisionsDbFor<T>(repoRoot: string, fn: (db: Database) => T): T;
   switchWorkspace(name: string): void;
   listWorkspaces(): { name: string; active: boolean }[];
   switchRepo(repoRoot: string): void;
@@ -21,11 +26,24 @@ export function createContext(name: string, repoRoot?: string): ServerContext {
   const ctx: ServerContext = {
     name,
     repoRoot: resolvedRepoRoot,
-    get db() {
-      return getDb(ctx.name);
+    withDb<T>(fn: (db: Database) => T): T {
+      const db = openWorkspaceDb(ctx.name);
+      try {
+        return fn(db);
+      } finally {
+        db.close();
+      }
     },
-    get decisionsDb() {
-      return getDecisionsDb(ctx.repoRoot);
+    withDecisionsDb<T>(fn: (db: Database) => T): T {
+      return ctx.withDecisionsDbFor(ctx.repoRoot, fn);
+    },
+    withDecisionsDbFor<T>(root: string, fn: (db: Database) => T): T {
+      const db = openDecisionsDb(root);
+      try {
+        return fn(db);
+      } finally {
+        db.close();
+      }
     },
     switchWorkspace(newName: string) {
       const config = loadWorkspaceConfig(newName);
@@ -43,14 +61,15 @@ export function createContext(name: string, repoRoot?: string): ServerContext {
       });
     },
     switchRepo(newRepoRoot: string) {
-      getDecisionsDb(newRepoRoot);
       ctx.repoRoot = newRepoRoot;
     },
     listRepos() {
-      return findAllRepos(ctx.db).map((r) => ({
-        ...r,
-        active: r.path === ctx.repoRoot,
-      }));
+      return ctx.withDb((db) =>
+        findAllRepos(db).map((r) => ({
+          ...r,
+          active: r.path === ctx.repoRoot,
+        })),
+      );
     },
   };
   return ctx;
