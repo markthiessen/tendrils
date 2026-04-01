@@ -6,9 +6,8 @@ import { errorEnvelope } from "./output/json.js";
 import { registerInitCommand } from "./cli/init.js";
 import { registerWorkspaceCommand } from "./cli/workspace.js";
 import { registerClaudeCommand } from "./cli/claude.js";
-import { registerActivityCommand } from "./cli/activity.js";
+import { registerGoalCommand } from "./cli/goal.js";
 import { registerTaskCommand } from "./cli/task.js";
-import { registerStoryCommand } from "./cli/story.js";
 import { registerWorkflowCommands } from "./cli/status.js";
 import { registerLogCommands } from "./cli/log.js";
 import { registerMapCommand } from "./cli/map.js";
@@ -20,7 +19,7 @@ const program = new Command();
 
 program
   .name("td")
-  .description("Tendrils — product story map management for LLM agents")
+  .description("Tendrils — work coordination for LLM agents")
   .version("0.1.0")
   .option("--json", "Output in JSON format", false)
   .option("-w, --workspace <name>", "Override workspace for this invocation")
@@ -31,9 +30,8 @@ program
 registerInitCommand(program);
 registerWorkspaceCommand(program);
 registerClaudeCommand(program);
-registerActivityCommand(program);
+registerGoalCommand(program);
 registerTaskCommand(program);
-registerStoryCommand(program);
 registerWorkflowCommands(program);
 registerLogCommands(program);
 registerMapCommand(program);

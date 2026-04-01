@@ -27,7 +27,7 @@ export function registerDecisionRoutes(app: FastifyInstance, ctx: ServerContext)
   app.post<{
     Body: {
       title: string;
-      contextType?: "story";
+      contextType?: "task";
       contextId?: number;
       tags?: string[];
       agent?: string;

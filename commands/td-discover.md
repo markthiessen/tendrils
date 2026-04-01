@@ -73,7 +73,7 @@ Look for patterns that aren't obvious from reading a single file but matter when
 - Shared utilities or helpers that new code should reuse
 
 ```bash
-td decide "Hierarchical IDs: A01.T01.S001 format, zero-padded" --tag convention
+td decide "Hierarchical IDs: G01.T001 format, zero-padded" --tag convention
 td decide "All CLI commands support --json flag for machine output" --tag convention,cli
 ```
 
@@ -127,7 +127,7 @@ Present a summary to the user:
 
 ## Guidelines
 
-- **Discover records decisions and updates the architecture diagram. It does not create stories or modify the story map.** Planning is done with `/td-plan`.
+- **Discover records decisions and updates the architecture diagram. It does not create tasks or modify the map.** Planning is done with `/td-plan`.
 - Use tags consistently: `feature` for capabilities, `stack` for technology choices, `convention` for patterns, `security` for auth/access concerns, plus a domain tag where relevant.
 - When describing features, think in vertical slices — describe the full user-facing outcome, not individual code layers.
 - Check existing decisions before adding. Avoid duplicates, especially across multi-repo runs.

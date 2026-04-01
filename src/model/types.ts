@@ -1,4 +1,4 @@
-export interface Activity {
+export interface Goal {
   id: number;
   seq: number;
   title: string;
@@ -7,17 +7,7 @@ export interface Activity {
   updated_at: string;
 }
 
-export interface Task {
-  id: number;
-  activity_id: number;
-  seq: number;
-  title: string;
-  description: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export type StoryStatus =
+export type TaskStatus =
   | "backlog"
   | "ready"
   | "claimed"
@@ -29,13 +19,13 @@ export type StoryStatus =
 
 export type Estimate = "XS" | "S" | "M" | "L" | "XL";
 
-export interface Story {
+export interface Task {
   id: number;
-  task_id: number;
+  goal_id: number;
   seq: number;
   title: string;
   description: string;
-  status: StoryStatus;
+  status: TaskStatus;
   claimed_by: string | null;
   claimed_at: string | null;
   blocked_reason: string | null;
@@ -52,9 +42,9 @@ export interface Repo {
   created_at: string;
 }
 
-export interface StoryItem {
+export interface TaskItem {
   id: number;
-  story_id: number;
+  task_id: number;
   title: string;
   repo: string | null;
   done: number;
@@ -64,23 +54,23 @@ export interface StoryItem {
 export interface Decision {
   id: number;
   title: string;
-  context_type: "story" | null;
+  context_type: "task" | null;
   context_id: number | null;
   tags: string;
   agent: string | null;
   created_at: string;
 }
 
-export interface StoryDependency {
+export interface TaskDependency {
   id: number;
-  story_id: number;
+  task_id: number;
   depends_on_id: number;
   created_at: string;
 }
 
 export interface WorkLogEntry {
   id: number;
-  entity_type: "story";
+  entity_type: "task";
   entity_id: number;
   agent: string | null;
   message: string;

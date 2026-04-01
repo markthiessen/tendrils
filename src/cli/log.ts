@@ -1,7 +1,6 @@
 import type { Command } from "commander";
 import { insertLogEntry, findLogEntries, findRecentLogEntries } from "../db/log.js";
-import { parseId, formatStoryId } from "../model/id.js";
-import { findStoryById } from "../db/story.js";
+import { parseId, formatTaskId } from "../model/id.js";
 import { findTaskById } from "../db/task.js";
 import { NotFoundError, InvalidArgumentError } from "../errors.js";
 import {
@@ -14,8 +13,8 @@ export function registerLogCommands(program: Command): void {
   // td log <id> <message>
   program
     .command("log")
-    .description("Add a work log entry to a story")
-    .argument("<id>", "Story ID")
+    .description("Add a work log entry to a task")
+    .argument("<id>", "Task ID")
     .argument("<message>", "Log message")
     .option("-a, --agent <name>", "Agent name")
     .action((idStr: string, message: string, opts: { agent?: string }) => {
@@ -24,23 +23,22 @@ export function registerLogCommands(program: Command): void {
       const agent = opts.agent ?? process.env["TD_AGENT"] ?? undefined;
       const parsed = parseId(idStr);
 
-      if (parsed.type !== "story") {
-        throw new InvalidArgumentError("Can only log to stories (e.g. A01.T01.S001).");
+      if (parsed.type !== "task") {
+        throw new InvalidArgumentError("Can only log to tasks (e.g. G01.T001).");
       }
 
-      const story = findStoryById(db, parsed.story!);
-      if (!story) throw new NotFoundError("story", idStr);
-      const entry = insertLogEntry(db, "story", parsed.story!, message, agent);
-      const task = findTaskById(db, story.task_id);
-      const shortId = formatStoryId(task?.activity_id ?? 0, story.task_id, story.id);
+      const task = findTaskById(db, parsed.task!);
+      if (!task) throw new NotFoundError("task", idStr);
+      const entry = insertLogEntry(db, "task", parsed.task!, message, agent);
+      const shortId = formatTaskId(task.goal_id, task.id);
       outputSuccess(ctx, entry, `Logged to ${shortId}: ${message}`);
     });
 
   // td history <id>
   program
     .command("history")
-    .description("Show work log for a story")
-    .argument("[id]", "Story ID (omit for recent activity)")
+    .description("Show work log for a task")
+    .argument("[id]", "Task ID (omit for recent activity)")
     .option("--recent", "Show recent activity across all entities")
     .option("-n, --limit <number>", "Number of entries", "20")
     .action(
@@ -62,7 +60,7 @@ export function registerLogCommands(program: Command): void {
                   ["Time", "ID", "Agent", "Message"],
                   entries.map((e) => [
                     e.created_at,
-                    `S${String(e.entity_id).padStart(3, "0")}`,
+                    `T${String(e.entity_id).padStart(3, "0")}`,
                     e.agent ?? "",
                     e.message,
                   ]),
@@ -72,13 +70,13 @@ export function registerLogCommands(program: Command): void {
         }
 
         const parsed = parseId(idStr);
-        if (parsed.type !== "story") {
+        if (parsed.type !== "task") {
           throw new InvalidArgumentError(
-            "Can only show history for stories (e.g. A01.T01.S001).",
+            "Can only show history for tasks (e.g. G01.T001).",
           );
         }
 
-        const entries = findLogEntries(db, "story", parsed.story!);
+        const entries = findLogEntries(db, "task", parsed.task!);
         outputSuccess(
           ctx,
           entries,

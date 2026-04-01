@@ -36,7 +36,7 @@ export function registerDecisionCommands(program: Command): void {
     .command("decide")
     .description("Record a decision")
     .argument("<title>", "The decision, stated as a fact")
-    .option("-c, --context <id>", "Story ID that prompted this")
+    .option("-c, --context <id>", "Task ID that prompted this")
     .option("-t, --tag <tags>", "Comma-separated tags")
     .option("-a, --agent <name>", "Agent name")
     .action(
@@ -47,13 +47,13 @@ export function registerDecisionCommands(program: Command): void {
         const ctx = getCtx(program);
         const db = resolveDecisionsDb();
 
-        let contextType: "story" | undefined;
+        let contextType: "task" | undefined;
         let contextId: number | undefined;
         if (opts.context) {
           const parsed = parseId(opts.context);
-          if (parsed.type === "story") {
-            contextType = "story";
-            contextId = parsed.story;
+          if (parsed.type === "task") {
+            contextType = "task";
+            contextId = parsed.task;
           }
         }
 

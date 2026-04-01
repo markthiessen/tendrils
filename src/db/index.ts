@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { getWorkspaceDbPath, getWorkspaceDir, getRepoDecisionsDbPath } from "../config/index.js";
-import { SCHEMA_V1, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4, SCHEMA_V5, SCHEMA_V6, SCHEMA_V7, DECISIONS_SCHEMA_V1 } from "./schema.js";
+import { SCHEMA_V1, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4, SCHEMA_V5, SCHEMA_V6, SCHEMA_V7, SCHEMA_V8, DECISIONS_SCHEMA_V1 } from "./schema.js";
 import { openDatabase, type Database } from "./compat.js";
 
 export type { Database } from "./compat.js";
@@ -92,6 +92,9 @@ export function initializeDb(workspace: string): void {
   if (version < 7) {
     db.exec(SCHEMA_V7);
   }
+  if (version < 8) {
+    db.exec(SCHEMA_V8);
+  }
 }
 
 function applyPendingMigrations(db: Database): void {
@@ -103,6 +106,7 @@ function applyPendingMigrations(db: Database): void {
   if (version < 5) db.exec(SCHEMA_V5);
   if (version < 6) db.exec(SCHEMA_V6);
   if (version < 7) db.exec(SCHEMA_V7);
+  if (version < 8) db.exec(SCHEMA_V8);
 }
 
 function getSchemaVersion(db: Database): number {

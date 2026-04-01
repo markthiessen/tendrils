@@ -42,12 +42,11 @@ function tdFail(args: string[]): string {
 
 function setup() {
   td(["init", "test"]);
-  td(["activity", "add", "Auth"]);
-  td(["task", "add", "A01", "Login"]);
-  td(["story", "add", "A01.T01", "Email login"]);
-  td(["story", "add", "A01.T01", "OAuth2"]);
-  td(["story", "status", "A01.T01.S001", "ready"]);
-  td(["story", "status", "A01.T01.S002", "ready"]);
+  td(["goal", "add", "Auth"]);
+  td(["task", "add", "G01", "Email login"]);
+  td(["task", "add", "G01", "OAuth2"]);
+  td(["task", "status", "G01.T001", "ready"]);
+  td(["task", "status", "G01.T002", "ready"]);
 }
 
 beforeEach(() => {
@@ -62,75 +61,75 @@ afterEach(() => {
 });
 
 describe("td next", () => {
-  it("returns highest-priority ready story", () => {
+  it("returns highest-priority ready task", () => {
     const result = tdJson(["next"]);
     expect(result.ok).toBe(true);
-    expect(result.data.entityType).toBe("story");
-    expect(result.data.shortId).toBe("A01.T01.S001");
+    expect(result.data.entityType).toBe("task");
+    expect(result.data.shortId).toBe("G01.T001");
   });
 
   it("returns null when nothing ready", () => {
-    td(["story", "status", "A01.T01.S001", "claimed"]);
-    td(["story", "status", "A01.T01.S002", "claimed"]);
+    td(["task", "status", "G01.T001", "claimed"]);
+    td(["task", "status", "G01.T002", "claimed"]);
     const result = tdJson(["next"]);
     expect(result.data).toBeNull();
   });
 
 });
 
-describe("td story claim / unclaim", () => {
-  it("claims a story", () => {
-    const result = tdJson(["story", "claim", "A01.T01.S001", "--agent", "claude-1"]);
+describe("td task claim / unclaim", () => {
+  it("claims a task", () => {
+    const result = tdJson(["task", "claim", "G01.T001", "--agent", "claude-1"]);
     expect(result.data.status).toBe("claimed");
     expect(result.data.claimed_by).toBe("claude-1");
   });
 
   it("is idempotent for same agent", () => {
-    td(["story", "claim", "A01.T01.S001", "--agent", "claude-1"]);
-    const result = tdJson(["story", "claim", "A01.T01.S001", "--agent", "claude-1"]);
+    td(["task", "claim", "G01.T001", "--agent", "claude-1"]);
+    const result = tdJson(["task", "claim", "G01.T001", "--agent", "claude-1"]);
     expect(result.ok).toBe(true);
   });
 
   it("rejects claim by different agent", () => {
-    td(["story", "claim", "A01.T01.S001", "--agent", "claude-1"]);
-    const err = tdFail(["story", "claim", "A01.T01.S001", "--agent", "claude-2"]);
+    td(["task", "claim", "G01.T001", "--agent", "claude-1"]);
+    const err = tdFail(["task", "claim", "G01.T001", "--agent", "claude-2"]);
     expect(err).toContain("already claimed");
   });
 
-  it("unclaims a story", () => {
-    td(["story", "claim", "A01.T01.S001", "--agent", "claude-1"]);
-    const result = tdJson(["story", "unclaim", "A01.T01.S001"]);
+  it("unclaims a task", () => {
+    td(["task", "claim", "G01.T001", "--agent", "claude-1"]);
+    const result = tdJson(["task", "unclaim", "G01.T001"]);
     expect(result.data.status).toBe("ready");
     expect(result.data.claimed_by).toBeNull();
   });
 });
 
-describe("td story status", () => {
+describe("td task status", () => {
   it("transitions through full lifecycle", () => {
-    td(["story", "claim", "A01.T01.S001", "--agent", "c1"]);
-    td(["story", "status", "A01.T01.S001", "in-progress"]);
-    td(["story", "status", "A01.T01.S001", "review"]);
-    const result = tdJson(["story", "status", "A01.T01.S001", "done"]);
+    td(["task", "claim", "G01.T001", "--agent", "c1"]);
+    td(["task", "status", "G01.T001", "in-progress"]);
+    td(["task", "status", "G01.T001", "review"]);
+    const result = tdJson(["task", "status", "G01.T001", "done"]);
     expect(result.data.status).toBe("done");
   });
 
   it("rejects invalid transitions", () => {
-    const err = tdFail(["story", "status", "A01.T01.S001", "done"]);
-    expect(err).toContain("Invalid story status transition");
+    const err = tdFail(["task", "status", "G01.T001", "done"]);
+    expect(err).toContain("Invalid task status transition");
   });
 
   it("is idempotent", () => {
-    td(["story", "claim", "A01.T01.S001"]);
-    td(["story", "status", "A01.T01.S001", "in-progress"]);
-    const result = tdJson(["story", "status", "A01.T01.S001", "in-progress"]);
+    td(["task", "claim", "G01.T001"]);
+    td(["task", "status", "G01.T001", "in-progress"]);
+    const result = tdJson(["task", "status", "G01.T001", "in-progress"]);
     expect(result.ok).toBe(true);
     expect(result.data.status).toBe("in-progress");
   });
 
   it("supports blocked with reason", () => {
-    td(["story", "claim", "A01.T01.S001"]);
-    td(["story", "status", "A01.T01.S001", "in-progress"]);
-    const result = tdJson(["story", "status", "A01.T01.S001", "blocked", "--reason", "Need API key"]);
+    td(["task", "claim", "G01.T001"]);
+    td(["task", "status", "G01.T001", "in-progress"]);
+    const result = tdJson(["task", "status", "G01.T001", "blocked", "--reason", "Need API key"]);
     expect(result.data.status).toBe("blocked");
     expect(result.data.blocked_reason).toBe("Need API key");
   });
@@ -138,9 +137,9 @@ describe("td story status", () => {
 
 describe("td log / history", () => {
   it("logs and retrieves entries", () => {
-    td(["log", "A01.T01.S001", "Started work", "--agent", "c1"]);
-    td(["log", "A01.T01.S001", "Halfway done", "--agent", "c1"]);
-    const result = tdJson(["history", "A01.T01.S001"]);
+    td(["log", "G01.T001", "Started work", "--agent", "c1"]);
+    td(["log", "G01.T001", "Halfway done", "--agent", "c1"]);
+    const result = tdJson(["history", "G01.T001"]);
     // Includes the status->ready log from setup + 2 manual logs
     expect(result.data.length).toBeGreaterThanOrEqual(3);
     const manualLogs = result.data.filter((e: any) => e.agent === "c1");
@@ -149,9 +148,9 @@ describe("td log / history", () => {
   });
 
   it("includes status changes in history", () => {
-    td(["story", "claim", "A01.T01.S001", "--agent", "c1"]);
-    td(["story", "status", "A01.T01.S001", "in-progress"]);
-    const result = tdJson(["history", "A01.T01.S001"]);
+    td(["task", "claim", "G01.T001", "--agent", "c1"]);
+    td(["task", "status", "G01.T001", "in-progress"]);
+    const result = tdJson(["history", "G01.T001"]);
     expect(result.data.length).toBeGreaterThanOrEqual(3);
     // First entry is the backlog->ready from setup
     expect(result.data[0].new_status).toBe("ready");
@@ -160,28 +159,26 @@ describe("td log / history", () => {
 });
 
 describe("td map", () => {
-  it("renders story map", () => {
+  it("renders map", () => {
     const output = td(["map"]);
-    expect(output).toContain("STORY MAP");
-    expect(output).toContain("A01 Auth");
-    expect(output).toContain("A01.T01 Login");
-    expect(output).toContain("A01.T01.S001 Email login");
+    expect(output).toContain("MAP");
+    expect(output).toContain("G01 Auth");
+    expect(output).toContain("G01.T001 Email login");
   });
 
   it("exports as JSON", () => {
     const output = td(["map", "--export", "json"]);
     const data = JSON.parse(output);
-    expect(data.activities).toHaveLength(1);
-    expect(data.activities[0].tasks[0].stories).toHaveLength(2);
+    expect(data.goals).toHaveLength(1);
+    expect(data.goals[0].tasks).toHaveLength(2);
   });
 });
 
 describe("td stats", () => {
   it("shows statistics", () => {
     const result = tdJson(["stats"]);
-    expect(result.data.activities).toBe(1);
-    expect(result.data.tasks).toBe(1);
-    expect(result.data.stories.total).toBe(2);
-    expect(result.data.stories.ready).toBe(2);
+    expect(result.data.goals).toBe(1);
+    expect(result.data.tasks.total).toBe(2);
+    expect(result.data.tasks.ready).toBe(2);
   });
 });

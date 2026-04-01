@@ -1,57 +1,42 @@
 import { InvalidArgumentError } from "../errors.js";
 
-export type EntityType = "activity" | "task" | "story";
+export type EntityType = "goal" | "task";
 
 export interface ParsedId {
   project?: string;
-  activity?: number;
+  goal?: number;
   task?: number;
-  story?: number;
   type: EntityType;
 }
 
 const ID_PATTERN =
-  /^(?:([A-Za-z][A-Za-z0-9_-]*)::)?(?:(A)(\d+)(?:\.(T)(\d+)(?:\.(S)(\d+))?)?)$/;
+  /^(?:([A-Za-z][A-Za-z0-9_-]*)::)?(?:(G)(\d+)(?:\.(T)(\d+))?)$/;
 
 export function parseId(input: string): ParsedId {
   const m = input.match(ID_PATTERN);
   if (!m) {
     throw new InvalidArgumentError(
-      `Invalid ID '${input}'. Expected format: A01, A01.T02, or A01.T02.S001`,
+      `Invalid ID '${input}'. Expected format: G01 or G01.T001`,
     );
   }
 
   const project = m[1] || undefined;
-
-  // Activity/Task/Story branch
-  const activity = parseInt(m[3]!, 10);
+  const goal = parseInt(m[3]!, 10);
 
   if (m[4] === "T") {
     const task = parseInt(m[5]!, 10);
-    if (m[6] === "S") {
-      const story = parseInt(m[7]!, 10);
-      return { project, activity, task, story, type: "story" };
-    }
-    return { project, activity, task, type: "task" };
+    return { project, goal, task, type: "task" };
   }
 
-  return { project, activity, type: "activity" };
+  return { project, goal, type: "goal" };
 }
 
-export function formatActivityId(id: number): string {
-  return `A${String(id).padStart(2, "0")}`;
+export function formatGoalId(id: number): string {
+  return `G${String(id).padStart(2, "0")}`;
 }
 
-export function formatTaskId(activityId: number, taskId: number): string {
-  return `${formatActivityId(activityId)}.T${String(taskId).padStart(2, "0")}`;
-}
-
-export function formatStoryId(
-  activityId: number,
-  taskId: number,
-  storyId: number,
-): string {
-  return `${formatTaskId(activityId, taskId)}.S${String(storyId).padStart(3, "0")}`;
+export function formatTaskId(goalId: number, taskId: number): string {
+  return `${formatGoalId(goalId)}.T${String(taskId).padStart(3, "0")}`;
 }
 
 export function formatFullId(project: string, shortId: string): string {

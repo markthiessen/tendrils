@@ -3,40 +3,58 @@ import type { Task } from "../model/types.js";
 
 export function insertTask(
   db: Database,
-  activityId: number,
+  goalId: number,
   title: string,
   description: string,
+  opts?: { estimate?: string },
 ): Task {
   const maxSeq = db
     .prepare(
-      "SELECT COALESCE(MAX(seq), 0) as max FROM tasks WHERE activity_id = ?",
+      "SELECT COALESCE(MAX(seq), 0) as max FROM tasks WHERE goal_id = ?",
     )
-    .get(activityId) as { max: number };
+    .get(goalId) as { max: number };
   const seq = maxSeq.max + 1;
 
   const result = db
     .prepare(
-      "INSERT INTO tasks (activity_id, seq, title, description) VALUES (?, ?, ?, ?)",
+      `INSERT INTO tasks (goal_id, seq, title, description, estimate)
+       VALUES (?, ?, ?, ?, ?)`,
     )
-    .run(activityId, seq, title, description);
+    .run(goalId, seq, title, description, opts?.estimate ?? null);
 
   return findTaskById(db, result.lastInsertRowid as number)!;
 }
 
+export interface TaskFilters {
+  goalId?: number;
+  status?: string;
+  claimedBy?: string;
+}
+
 export function findAllTasks(
   db: Database,
-  activityId?: number,
+  filters?: TaskFilters,
 ): Task[] {
-  if (activityId !== undefined) {
-    return db
-      .prepare(
-        "SELECT * FROM tasks WHERE activity_id = ? ORDER BY seq",
-      )
-      .all(activityId) as Task[];
+  const where: string[] = [];
+  const params: unknown[] = [];
+
+  if (filters?.goalId !== undefined) {
+    where.push("goal_id = ?");
+    params.push(filters.goalId);
   }
+  if (filters?.status !== undefined) {
+    where.push("status = ?");
+    params.push(filters.status);
+  }
+  if (filters?.claimedBy !== undefined) {
+    where.push("claimed_by = ?");
+    params.push(filters.claimedBy);
+  }
+
+  const whereClause = where.length ? `WHERE ${where.join(" AND ")}` : "";
   return db
-    .prepare("SELECT * FROM tasks ORDER BY activity_id, seq")
-    .all() as Task[];
+    .prepare(`SELECT * FROM tasks ${whereClause} ORDER BY goal_id, seq`)
+    .all(...params) as Task[];
 }
 
 export function findTaskById(
@@ -51,7 +69,11 @@ export function findTaskById(
 export function updateTask(
   db: Database,
   id: number,
-  fields: { title?: string; description?: string },
+  fields: {
+    title?: string;
+    description?: string;
+    estimate?: string | null;
+  },
 ): Task | undefined {
   const sets: string[] = [];
   const values: unknown[] = [];
@@ -63,6 +85,10 @@ export function updateTask(
   if (fields.description !== undefined) {
     sets.push("description = ?");
     values.push(fields.description);
+  }
+  if (fields.estimate !== undefined) {
+    sets.push("estimate = ?");
+    values.push(fields.estimate);
   }
   if (sets.length === 0) return findTaskById(db, id);
 
@@ -80,6 +106,24 @@ export function deleteTask(db: Database, id: number): boolean {
   return result.changes > 0;
 }
 
+export function moveTask(
+  db: Database,
+  id: number,
+  newGoalId: number,
+): Task | undefined {
+  const maxSeq = db
+    .prepare(
+      "SELECT COALESCE(MAX(seq), 0) as max FROM tasks WHERE goal_id = ?",
+    )
+    .get(newGoalId) as { max: number };
+
+  db.prepare(
+    "UPDATE tasks SET goal_id = ?, seq = ?, updated_at = datetime('now') WHERE id = ?",
+  ).run(newGoalId, maxSeq.max + 1, id);
+
+  return findTaskById(db, id);
+}
+
 export function reorderTask(
   db: Database,
   id: number,
@@ -91,9 +135,9 @@ export function reorderTask(
   if (afterId === null) {
     const minSeq = db
       .prepare(
-        "SELECT COALESCE(MIN(seq), 1) as min FROM tasks WHERE activity_id = ?",
+        "SELECT COALESCE(MIN(seq), 1) as min FROM tasks WHERE goal_id = ?",
       )
-      .get(task.activity_id) as { min: number };
+      .get(task.goal_id) as { min: number };
     db.prepare("UPDATE tasks SET seq = ?, updated_at = datetime('now') WHERE id = ?").run(
       minSeq.min - 1,
       id,
@@ -107,7 +151,7 @@ export function reorderTask(
     );
   }
 
-  const siblings = findAllTasks(db, task.activity_id);
+  const siblings = findAllTasks(db, { goalId: task.goal_id });
   const update = db.prepare("UPDATE tasks SET seq = ? WHERE id = ?");
   const txn = db.transaction(() => {
     siblings.forEach((t, i) => update.run(i + 1, t.id));

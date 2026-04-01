@@ -5,7 +5,7 @@ export function insertDecision(
   db: Database,
   title: string,
   opts?: {
-    contextType?: "story";
+    contextType?: "task";
     contextId?: number;
     tags?: string[];
     agent?: string;
