@@ -31,3 +31,7 @@ export function validateTaskTransition(
 export function isValidTaskStatus(s: string): s is TaskStatus {
   return ALL_TASK_STATUSES.includes(s as TaskStatus);
 }
+
+export function isTerminalStatus(status: TaskStatus): boolean {
+  return status === "done" || status === "cancelled";
+}

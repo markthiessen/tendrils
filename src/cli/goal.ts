@@ -1,14 +1,19 @@
+import { createInterface } from "node:readline/promises";
 import type { Command } from "commander";
 import {
   insertGoal,
   findAllGoals,
+  findArchivedGoals,
   findGoalById,
   updateGoal,
   deleteGoal,
   reorderGoal,
+  archiveGoal,
 } from "../db/goal.js";
-import { formatGoalId } from "../model/id.js";
-import { NotFoundError } from "../errors.js";
+import { findAllTasks } from "../db/task.js";
+import { formatGoalId, formatTaskId } from "../model/id.js";
+import { isTerminalStatus } from "../model/status.js";
+import { NotFoundError, ConflictError } from "../errors.js";
 import {
   outputSuccess,
   renderTable,
@@ -36,21 +41,21 @@ export function registerGoalCommand(program: Command): void {
 
   goal
     .command("list")
-    .action(() => {
+    .option("--archived", "Show archived goals instead of active goals")
+    .action((opts: { archived?: boolean }) => {
       const ctx = getCtx(program);
       const db = resolveDb(program);
-      const goals = findAllGoals(db);
+      const goals = opts.archived ? findArchivedGoals(db) : findAllGoals(db);
       const data = goals.map((g) => ({ ...g, shortId: formatGoalId(g.id) }));
-      outputSuccess(
-        ctx,
-        data,
-        goals.length === 0
-          ? "No goals found."
-          : renderTable(
-              ["ID", "Title", "Description"],
-              goals.map((g) => [formatGoalId(g.id), g.title, g.description]),
-            ),
+      const emptyMsg = opts.archived ? "No archived goals." : "No goals found.";
+      const headers = opts.archived
+        ? ["ID", "Title", "Summary", "Archived"]
+        : ["ID", "Title", "Description"];
+      const rows = goals.map((g) => opts.archived
+        ? [formatGoalId(g.id), g.title, g.summary || "(none)", g.archived_at ?? ""]
+        : [formatGoalId(g.id), g.title, g.description],
       );
+      outputSuccess(ctx, data, goals.length === 0 ? emptyMsg : renderTable(headers, rows));
     });
 
   goal
@@ -105,6 +110,37 @@ export function registerGoalCommand(program: Command): void {
       const deleted = deleteGoal(db, numId);
       if (!deleted) throw new NotFoundError("goal", idStr);
       outputSuccess(ctx, { id: idStr, deleted: true }, `Deleted goal ${idStr}.`);
+    });
+
+  goal
+    .command("archive")
+    .argument("<id>", "Goal ID (e.g. G01)")
+    .option("-s, --summary <text>", "Archive summary")
+    .action(async (idStr: string, opts: { summary?: string }) => {
+      const ctx = getCtx(program);
+      const db = resolveDb(program);
+      const numId = parseGoalNum(idStr);
+      const g = findGoalById(db, numId);
+      if (!g) throw new NotFoundError("goal", idStr);
+      if (g.archived_at) throw new ConflictError(`Goal ${idStr} is already archived.`);
+
+      const tasks = findAllTasks(db, { goalId: numId });
+      const incomplete = tasks.filter((t) => !isTerminalStatus(t.status));
+      if (incomplete.length > 0) {
+        const ids = incomplete.map((t) => formatTaskId(t.goal_id, t.id)).join(", ");
+        throw new ConflictError(`Goal ${idStr} has ${incomplete.length} incomplete task(s): ${ids}`);
+      }
+
+      let summary = opts.summary;
+      if (!summary) {
+        const rl = createInterface({ input: process.stdin, output: process.stdout });
+        summary = await rl.question("Summary: ");
+        rl.close();
+      }
+
+      const archived = archiveGoal(db, numId, summary);
+      if (!archived) throw new NotFoundError("goal", idStr);
+      outputSuccess(ctx, { ...archived, shortId: formatGoalId(archived.id) }, `Archived goal ${formatGoalId(archived.id)}: ${archived.title}`);
     });
 
   goal
