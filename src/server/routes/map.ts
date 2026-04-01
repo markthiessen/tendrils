@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { findAllGoals } from "../../db/goal.js";
+import { findAllGoals, countArchivedGoals } from "../../db/goal.js";
 import { findAllTasks } from "../../db/task.js";
 import { formatGoalId, formatTaskId } from "../../model/id.js";
 import type { ServerContext } from "../context.js";
@@ -26,6 +26,7 @@ export function registerMapRoutes(app: FastifyInstance, ctx: ServerContext) {
         ok: true,
         data: {
           goals: mapData,
+          archivedCount: countArchivedGoals(db),
         },
       };
     });

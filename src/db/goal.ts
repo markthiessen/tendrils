@@ -32,6 +32,13 @@ export function findArchivedGoals(db: Database): Goal[] {
     .all() as Goal[];
 }
 
+export function countArchivedGoals(db: Database): number {
+  const row = db
+    .prepare("SELECT COUNT(*) as count FROM goals WHERE archived_at IS NOT NULL")
+    .get() as { count: number };
+  return row.count;
+}
+
 export function archiveGoal(
   db: Database,
   id: number,

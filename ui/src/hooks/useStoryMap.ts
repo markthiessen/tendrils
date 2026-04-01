@@ -29,10 +29,11 @@ export interface GoalData {
 
 export interface MapData {
   goals: GoalData[];
+  archivedCount: number;
 }
 
 const MAP_EVENTS = [
-  "goal.created", "goal.updated", "goal.deleted",
+  "goal.created", "goal.updated", "goal.deleted", "goal.archived",
   "task.created", "task.updated", "task.deleted",
   "workspace.switched",
 ];

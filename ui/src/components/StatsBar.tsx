@@ -13,6 +13,11 @@ export function StatsBar({ data }: { data: MapData }) {
       <span className="stat">
         {data.goals.length} goals
       </span>
+      {data.archivedCount > 0 && (
+        <span className="stat stat-archived" title="Archived goals are hidden from the kanban">
+          {data.archivedCount} archived
+        </span>
+      )}
       <span className="stat-separator" />
       <span className="stat">{allTasks.length} tasks</span>
       {Object.entries(counts).map(([status, count]) => (

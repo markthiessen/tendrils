@@ -71,6 +71,11 @@ body {
   color: #64748b;
 }
 
+.stat-archived {
+  color: #475569;
+  font-style: italic;
+}
+
 .app-body {
   display: flex;
   flex: 1;
