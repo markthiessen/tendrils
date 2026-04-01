@@ -10,7 +10,7 @@ export interface RepoInfo {
   active: boolean;
 }
 
-const REPO_EVENTS = ["repo.switched"];
+const REPO_EVENTS = ["repo.switched", "workspace.switched"];
 
 export function useRepos() {
   const [repos, setRepos] = useState<RepoInfo[]>([]);

@@ -6,7 +6,7 @@ export function insertTask(
   goalId: number,
   title: string,
   description: string,
-  opts?: { estimate?: string },
+  opts?: { estimate?: string; repo?: string },
 ): Task {
   const maxSeq = db
     .prepare(
@@ -17,10 +17,10 @@ export function insertTask(
 
   const result = db
     .prepare(
-      `INSERT INTO tasks (goal_id, seq, title, description, estimate)
-       VALUES (?, ?, ?, ?, ?)`,
+      `INSERT INTO tasks (goal_id, seq, title, description, estimate, repo)
+       VALUES (?, ?, ?, ?, ?, ?)`,
     )
-    .run(goalId, seq, title, description, opts?.estimate ?? null);
+    .run(goalId, seq, title, description, opts?.estimate ?? null, opts?.repo ?? null);
 
   return findTaskById(db, result.lastInsertRowid as number)!;
 }
@@ -29,6 +29,7 @@ export interface TaskFilters {
   goalId?: number;
   status?: string;
   claimedBy?: string;
+  repo?: string;
 }
 
 export function findAllTasks(
@@ -49,6 +50,10 @@ export function findAllTasks(
   if (filters?.claimedBy !== undefined) {
     where.push("claimed_by = ?");
     params.push(filters.claimedBy);
+  }
+  if (filters?.repo !== undefined) {
+    where.push("repo = ?");
+    params.push(filters.repo);
   }
 
   const whereClause = where.length ? `WHERE ${where.join(" AND ")}` : "";
@@ -73,6 +78,7 @@ export function updateTask(
     title?: string;
     description?: string;
     estimate?: string | null;
+    repo?: string | null;
   },
 ): Task | undefined {
   const sets: string[] = [];
@@ -89,6 +95,10 @@ export function updateTask(
   if (fields.estimate !== undefined) {
     sets.push("estimate = ?");
     values.push(fields.estimate);
+  }
+  if (fields.repo !== undefined) {
+    sets.push("repo = ?");
+    values.push(fields.repo);
   }
   if (sets.length === 0) return findTaskById(db, id);
 
@@ -157,4 +167,43 @@ export function reorderTask(
     siblings.forEach((t, i) => update.run(i + 1, t.id));
   });
   txn();
+}
+
+const DEP_FILTER = `AND t.id NOT IN (
+  SELECT td.task_id FROM task_dependencies td
+  JOIN tasks dep ON dep.id = td.depends_on_id
+  WHERE dep.status != 'done'
+)`;
+
+export function findNextTask(
+  db: Database,
+  repo?: string,
+): Task | undefined {
+  let task: Task | undefined;
+
+  if (repo) {
+    task = db
+      .prepare(
+        `SELECT t.* FROM tasks t
+         WHERE t.status = 'ready' AND t.repo = ?
+         ${DEP_FILTER}
+         ORDER BY t.goal_id, t.seq
+         LIMIT 1`,
+      )
+      .get(repo) as Task | undefined;
+  }
+
+  if (!task) {
+    task = db
+      .prepare(
+        `SELECT t.* FROM tasks t
+         WHERE t.status = 'ready'
+         ${DEP_FILTER}
+         ORDER BY t.goal_id, t.seq
+         LIMIT 1`,
+      )
+      .get() as Task | undefined;
+  }
+
+  return task;
 }

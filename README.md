@@ -44,9 +44,9 @@ td task add G01 "Email/password login"
 td task add G01 "OAuth2 provider support"
 td task add G01 "Sign-up form"
 
-# Add checklist items scoped to repos
-td task items G01.T001 add "POST /auth/login endpoint" --role api
-td task items G01.T001 add "Login form component" --role web
+# Scope tasks to repos in multi-repo workspaces
+td task add G01 "POST /auth/login endpoint" --repo api
+td task add G01 "Login form component" --repo web
 
 # Mark tasks as ready
 td task status G01.T001 ready

@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { findNextTask } from "../../db/task.js";
 import { insertLogEntry, findLogEntries, findRecentLogEntries } from "../../db/log.js";
 import { emit } from "../sse.js";
 import type { ServerContext } from "../context.js";
@@ -6,31 +7,8 @@ import type { ServerContext } from "../context.js";
 export function registerWorkflowRoutes(app: FastifyInstance, ctx: ServerContext) {
   app.get<{ Querystring: { repo?: string } }>("/api/next", (req) => {
     return ctx.withDb((db) => {
-      // Prioritize tasks with incomplete items for this repo
-      const repoFilter = req.query.repo
-        ? `AND t.id IN (SELECT task_id FROM task_items WHERE repo = '${req.query.repo.replace(/'/g, "''")}' AND done = 0)`
-        : "";
-
-      let task = db.prepare(
-        `SELECT t.* FROM tasks t
-         WHERE t.status = 'ready'
-         ${repoFilter}
-         ORDER BY t.goal_id, t.seq
-         LIMIT 1`,
-      ).get() as any;
-
-      // Fall back to any ready task if no repo-specific matches
-      if (!task && req.query.repo) {
-        task = db.prepare(
-          `SELECT t.* FROM tasks t
-           WHERE t.status = 'ready'
-           ORDER BY t.goal_id, t.seq
-           LIMIT 1`,
-        ).get() as any;
-      }
-
+      const task = findNextTask(db, req.query.repo);
       if (task) return { ok: true, data: { ...task, entityType: "task" } };
-
       return { ok: true, data: null };
     });
   });

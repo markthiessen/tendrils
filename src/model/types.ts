@@ -30,6 +30,7 @@ export interface Task {
   claimed_at: string | null;
   blocked_reason: string | null;
   estimate: string | null;
+  repo: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -39,15 +40,6 @@ export interface Repo {
   path: string;
   role: string | null;
   name: string;
-  created_at: string;
-}
-
-export interface TaskItem {
-  id: number;
-  task_id: number;
-  title: string;
-  repo: string | null;
-  done: number;
   created_at: string;
 }
 

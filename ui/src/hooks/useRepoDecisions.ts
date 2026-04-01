@@ -4,7 +4,7 @@ import type { DecisionData } from "./useDecisions";
 import { useEventSource } from "./useEventSource";
 
 const DECISION_EVENTS = [
-  "decision.created", "decision.deleted",
+  "decision.created", "decision.deleted", "workspace.switched",
 ];
 
 export function useRepoDecisions(repoPath: string | null) {

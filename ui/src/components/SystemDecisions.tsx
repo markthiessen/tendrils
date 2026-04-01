@@ -6,7 +6,13 @@ function DecisionList({ repoPath }: { repoPath: string }) {
   const { decisions } = useRepoDecisions(repoPath);
 
   if (decisions.length === 0) {
-    return <div className="system-decisions-empty">No decisions recorded for this repo.</div>;
+    return (
+      <div className="system-decisions-empty">
+        <p>No decisions recorded for this repo.</p>
+        <p style={{ marginTop: 8 }}>Use <code>/td-discover</code> in Claude Code, or:</p>
+        <code style={{ display: "block", marginTop: 4 }}>td decide "Express + TypeScript" --tag stack</code>
+      </div>
+    );
   }
 
   return (
@@ -56,7 +62,11 @@ export function SystemDecisions() {
         )}
       </div>
       {repos.length === 0 ? (
-        <div className="system-decisions-empty">No repos in this workspace.</div>
+        <div className="system-decisions-empty">
+          <p>No repos in this workspace.</p>
+          <p style={{ marginTop: 8 }}>Bind a repo with:</p>
+          <code>td init workspace --role api</code>
+        </div>
       ) : activePath ? (
         <DecisionList repoPath={activePath} />
       ) : null}

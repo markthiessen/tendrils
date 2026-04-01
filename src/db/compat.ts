@@ -34,8 +34,8 @@ export function openDatabase(filePath: string): Database {
   const raw = new WasmDatabase(filePath);
 
   // Foreign keys are enabled by default in node-sqlite3-wasm
-  raw.exec("PRAGMA journal_mode = WAL");
   raw.exec("PRAGMA busy_timeout = 5000");
+  raw.exec("PRAGMA journal_mode = WAL");
 
   const db: Database = {
     prepare(sql: string): PreparedStatement {
