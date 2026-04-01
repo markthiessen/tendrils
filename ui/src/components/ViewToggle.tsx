@@ -10,7 +10,7 @@ export function ViewToggle({ view, onChange }: Props) {
         className={`view-toggle-btn${view === "workspace" ? " view-toggle-btn--active" : ""}`}
         onClick={() => onChange("workspace")}
       >
-        Workspace
+        Board
       </button>
       <button
         className={`view-toggle-btn${view === "system" ? " view-toggle-btn--active" : ""}`}

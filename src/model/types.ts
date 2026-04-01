@@ -3,6 +3,8 @@ export interface Goal {
   seq: number;
   title: string;
   description: string;
+  archived_at: string | null;
+  summary: string;
   created_at: string;
   updated_at: string;
 }

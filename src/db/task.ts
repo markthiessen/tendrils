@@ -181,12 +181,15 @@ export function findNextTask(
 ): Task | undefined {
   let task: Task | undefined;
 
+  const ARCHIVED_FILTER = `AND t.goal_id IN (SELECT id FROM goals WHERE archived_at IS NULL)`;
+
   if (repo) {
     task = db
       .prepare(
         `SELECT t.* FROM tasks t
          WHERE t.status = 'ready' AND t.repo = ?
          ${DEP_FILTER}
+         ${ARCHIVED_FILTER}
          ORDER BY t.goal_id, t.seq
          LIMIT 1`,
       )
@@ -199,6 +202,7 @@ export function findNextTask(
         `SELECT t.* FROM tasks t
          WHERE t.status = 'ready'
          ${DEP_FILTER}
+         ${ARCHIVED_FILTER}
          ORDER BY t.goal_id, t.seq
          LIMIT 1`,
       )
