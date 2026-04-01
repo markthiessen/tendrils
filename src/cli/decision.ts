@@ -10,7 +10,9 @@ import {
 } from "../db/decision.js";
 import {
   getArchitecture,
+  updateArchitecture,
   findAllArchitectureNotes,
+  upsertArchitectureNote,
 } from "../db/architecture.js";
 import { parseId } from "../model/id.js";
 import { NotFoundError } from "../errors.js";
@@ -182,30 +184,34 @@ export function registerDecisionCommands(program: Command): void {
       );
     });
 
-  program
+  const arch = program
     .command("architecture")
     .alias("arch")
-    .description("Show the system architecture diagram and notes")
+    .description("Manage the system architecture diagram");
+
+  arch
+    .command("show", { isDefault: true })
+    .description("Show the architecture diagram and notes")
     .action(() => {
       const ctx = getCtx(program);
       const resolved = resolveWorkspace(program.opts().workspace);
       const db = getDb(resolved.name);
-      const arch = getArchitecture(db);
+      const archData = getArchitecture(db);
       const notes = findAllArchitectureNotes(db);
 
       if (ctx.json) {
-        outputSuccess(ctx, { ...arch, notes }, "");
+        outputSuccess(ctx, { ...archData, notes }, "");
         return;
       }
 
-      if (!arch.mermaid_source) {
-        outputSuccess(ctx, { mermaid_source: "", notes: [] }, "No architecture diagram. Use the web UI to create one.");
+      if (!archData.mermaid_source) {
+        outputSuccess(ctx, { mermaid_source: "", notes: [] }, "No architecture diagram. Use 'td arch set' or the web UI to create one.");
         return;
       }
 
       const lines: string[] = [];
       lines.push("```mermaid");
-      lines.push(arch.mermaid_source);
+      lines.push(archData.mermaid_source);
       lines.push("```");
 
       if (notes.length > 0) {
@@ -215,7 +221,34 @@ export function registerDecisionCommands(program: Command): void {
         }
       }
 
-      outputSuccess(ctx, { ...arch, notes }, lines.join("\n"));
+      outputSuccess(ctx, { ...archData, notes }, lines.join("\n"));
+    });
+
+  arch
+    .command("set")
+    .description("Set the architecture diagram (Mermaid source)")
+    .argument("<mermaid>", "Mermaid diagram source")
+    .action((mermaid: string) => {
+      const ctx = getCtx(program);
+      const resolved = resolveWorkspace(program.opts().workspace);
+      const db = getDb(resolved.name);
+      const result = updateArchitecture(db, mermaid);
+      outputSuccess(ctx, result, "Architecture diagram updated.");
+    });
+
+  arch
+    .command("note")
+    .description("Add or update a note on a diagram node")
+    .argument("<node-id>", "The node ID from the Mermaid diagram")
+    .argument("<content>", "Note content")
+    .option("--type <type>", "Note type: node or edge", "node")
+    .action((nodeId: string, content: string, opts: { type: string }) => {
+      const ctx = getCtx(program);
+      const resolved = resolveWorkspace(program.opts().workspace);
+      const db = getDb(resolved.name);
+      const noteType = opts.type === "edge" ? "edge" : "node" as const;
+      const note = upsertArchitectureNote(db, nodeId, noteType, content);
+      outputSuccess(ctx, note, `Note on '${nodeId}': ${content}`);
     });
 
   program

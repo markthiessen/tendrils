@@ -1,8 +1,8 @@
-import type Database from "better-sqlite3";
+import type { Database } from "./compat.js";
 import type { WorkLogEntry } from "../model/types.js";
 
 export function insertLogEntry(
-  db: Database.Database,
+  db: Database,
   entityType: "story",
   entityId: number,
   message: string,
@@ -23,7 +23,7 @@ export function insertLogEntry(
 }
 
 export function findLogEntries(
-  db: Database.Database,
+  db: Database,
   entityType: "story",
   entityId: number,
 ): WorkLogEntry[] {
@@ -35,7 +35,7 @@ export function findLogEntries(
 }
 
 export function findRecentLogEntries(
-  db: Database.Database,
+  db: Database,
   limit: number = 20,
 ): WorkLogEntry[] {
   return db

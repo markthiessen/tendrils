@@ -1,8 +1,8 @@
-import type Database from "better-sqlite3";
+import type { Database } from "./compat.js";
 import type { StoryItem } from "../model/types.js";
 
 export function insertStoryItem(
-  db: Database.Database,
+  db: Database,
   storyId: number,
   title: string,
   repo?: string,
@@ -19,7 +19,7 @@ export function insertStoryItem(
 }
 
 export function findStoryItems(
-  db: Database.Database,
+  db: Database,
   storyId: number,
 ): StoryItem[] {
   return db
@@ -28,7 +28,7 @@ export function findStoryItems(
 }
 
 export function markStoryItemDone(
-  db: Database.Database,
+  db: Database,
   id: number,
 ): StoryItem | undefined {
   db.prepare("UPDATE story_items SET done = 1 WHERE id = ?").run(id);
@@ -38,7 +38,7 @@ export function markStoryItemDone(
 }
 
 export function markStoryItemUndone(
-  db: Database.Database,
+  db: Database,
   id: number,
 ): StoryItem | undefined {
   db.prepare("UPDATE story_items SET done = 0 WHERE id = ?").run(id);
@@ -48,7 +48,7 @@ export function markStoryItemUndone(
 }
 
 export function deleteStoryItem(
-  db: Database.Database,
+  db: Database,
   id: number,
 ): boolean {
   const result = db.prepare("DELETE FROM story_items WHERE id = ?").run(id);
@@ -56,7 +56,7 @@ export function deleteStoryItem(
 }
 
 export function findStoriesWithIncompleteItemsForRepo(
-  db: Database.Database,
+  db: Database,
   repo: string,
 ): number[] {
   const rows = db

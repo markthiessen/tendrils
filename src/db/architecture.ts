@@ -1,4 +1,4 @@
-import type Database from "better-sqlite3";
+import type { Database } from "./compat.js";
 
 export interface Architecture {
   mermaid_source: string;
@@ -14,7 +14,7 @@ export interface ArchitectureNote {
   updated_at: string;
 }
 
-export function getArchitecture(db: Database.Database): Architecture {
+export function getArchitecture(db: Database): Architecture {
   const row = db
     .prepare("SELECT mermaid_source, updated_at FROM architecture WHERE id = 1")
     .get() as Architecture | undefined;
@@ -26,7 +26,7 @@ export function getArchitecture(db: Database.Database): Architecture {
 }
 
 export function updateArchitecture(
-  db: Database.Database,
+  db: Database,
   mermaidSource: string,
 ): Architecture {
   db.prepare(
@@ -40,7 +40,7 @@ export function updateArchitecture(
 }
 
 export function findAllArchitectureNotes(
-  db: Database.Database,
+  db: Database,
 ): ArchitectureNote[] {
   return db
     .prepare("SELECT * FROM architecture_notes ORDER BY node_id")
@@ -48,7 +48,7 @@ export function findAllArchitectureNotes(
 }
 
 export function upsertArchitectureNote(
-  db: Database.Database,
+  db: Database,
   nodeId: string,
   noteType: "node" | "edge",
   content: string,
@@ -67,7 +67,7 @@ export function upsertArchitectureNote(
 }
 
 export function deleteArchitectureNote(
-  db: Database.Database,
+  db: Database,
   nodeId: string,
 ): boolean {
   const result = db
