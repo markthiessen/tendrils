@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { getWorkspaceDbPath, getWorkspaceDir, getRepoDecisionsDbPath } from "../config/index.js";
-import { SCHEMA_V1, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4, SCHEMA_V5, SCHEMA_V6, SCHEMA_V7, SCHEMA_V8, DECISIONS_SCHEMA_V1 } from "./schema.js";
+import * as S from "./schema.js";
 import { openDatabase, type Database } from "./compat.js";
 
 export type { Database } from "./compat.js";
@@ -27,7 +27,7 @@ export function getDecisionsDb(repoRoot: string): Database {
   const db = openDatabase(dbPath);
   const version = getSchemaVersion(db);
   if (version < 1) {
-    db.exec(DECISIONS_SCHEMA_V1);
+    db.exec(S.DECISIONS_SCHEMA_V1);
   }
   _decisionsDbs.set(repoRoot, db);
   return db;
@@ -48,7 +48,7 @@ export function openDecisionsDb(repoRoot: string): Database {
   const db = openDatabase(dbPath);
   const version = getSchemaVersion(db);
   if (version < 1) {
-    db.exec(DECISIONS_SCHEMA_V1);
+    db.exec(S.DECISIONS_SCHEMA_V1);
   }
   return db;
 }
@@ -64,49 +64,33 @@ export function closeDb(): void {
   _decisionsDbs.clear();
 }
 
+const MIGRATIONS = [
+  S.SCHEMA_V1, S.SCHEMA_V2, S.SCHEMA_V3, S.SCHEMA_V4,
+  S.SCHEMA_V5, S.SCHEMA_V6, S.SCHEMA_V7, S.SCHEMA_V8, S.SCHEMA_V9,
+];
+
+function runMigrations(db: Database, fromVersion: number): void {
+  for (let i = fromVersion; i < MIGRATIONS.length; i++) {
+    db.exec(MIGRATIONS[i]!);
+  }
+}
+
 export function initializeDb(workspace: string): void {
   const dir = getWorkspaceDir(workspace);
   fs.mkdirSync(dir, { recursive: true });
 
-  const db = getDb(workspace);
-  const version = getSchemaVersion(db);
-
-  if (version < 1) {
-    db.exec(SCHEMA_V1);
-  }
-  if (version < 2) {
-    db.exec(SCHEMA_V2);
-  }
-  if (version < 3) {
-    db.exec(SCHEMA_V3);
-  }
-  if (version < 4) {
-    db.exec(SCHEMA_V4);
-  }
-  if (version < 5) {
-    db.exec(SCHEMA_V5);
-  }
-  if (version < 6) {
-    db.exec(SCHEMA_V6);
-  }
-  if (version < 7) {
-    db.exec(SCHEMA_V7);
-  }
-  if (version < 8) {
-    db.exec(SCHEMA_V8);
+  const db = openWorkspaceDb(workspace);
+  try {
+    runMigrations(db, getSchemaVersion(db));
+  } finally {
+    db.close();
   }
 }
 
 function applyPendingMigrations(db: Database): void {
   const version = getSchemaVersion(db);
   if (version < 1) return; // Fresh db — initializeDb will handle full setup
-  if (version < 2) db.exec(SCHEMA_V2);
-  if (version < 3) db.exec(SCHEMA_V3);
-  if (version < 4) db.exec(SCHEMA_V4);
-  if (version < 5) db.exec(SCHEMA_V5);
-  if (version < 6) db.exec(SCHEMA_V6);
-  if (version < 7) db.exec(SCHEMA_V7);
-  if (version < 8) db.exec(SCHEMA_V8);
+  runMigrations(db, version);
 }
 
 function getSchemaVersion(db: Database): number {

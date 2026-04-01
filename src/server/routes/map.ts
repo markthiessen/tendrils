@@ -1,7 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { findAllGoals } from "../../db/goal.js";
 import { findAllTasks } from "../../db/task.js";
-import { findTaskItems } from "../../db/task-item.js";
 import { formatGoalId, formatTaskId } from "../../model/id.js";
 import type { ServerContext } from "../context.js";
 
@@ -19,7 +18,6 @@ export function registerMapRoutes(app: FastifyInstance, ctx: ServerContext) {
           tasks: goalTasks.map((t) => ({
             ...t,
             shortId: formatTaskId(g.id, t.id),
-            items: findTaskItems(db, t.id),
           })),
         };
       });

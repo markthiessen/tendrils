@@ -9,11 +9,11 @@ export function WorkspaceView() {
   const { entries } = useActivityFeed();
 
   if (loading) {
-    return <div className="loading">Loading story map...</div>;
+    return <div className="loading">Loading map...</div>;
   }
 
   if (!data) {
-    return <div className="error">Failed to load story map.</div>;
+    return <div className="error">Failed to load map.</div>;
   }
 
   return (

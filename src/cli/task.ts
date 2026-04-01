@@ -1,5 +1,4 @@
 import type { Command } from "commander";
-import { resolveWorkspace } from "../config/binding.js";
 import { claimTask, unclaimTask, changeTaskStatus, getAgent } from "./status.js";
 import {
   insertTask,
@@ -10,13 +9,6 @@ import {
   moveTask,
   reorderTask,
 } from "../db/task.js";
-import {
-  insertTaskItem,
-  findTaskItems,
-  markTaskItemDone,
-  markTaskItemUndone,
-  deleteTaskItem,
-} from "../db/task-item.js";
 import {
   addDependency,
   removeDependency,
@@ -46,11 +38,12 @@ export function registerTaskCommand(program: Command): void {
     .argument("<title>", "Task title")
     .option("-d, --desc <text>", "Description", "")
     .option("-e, --estimate <size>", "Estimate (XS, S, M, L, XL)")
+    .option("-r, --repo <name>", "Repo/role this task belongs to")
     .action(
       (
         goalIdStr: string,
         title: string,
-        opts: { desc: string; estimate?: string },
+        opts: { desc: string; estimate?: string; repo?: string },
       ) => {
         const ctx = getCtx(program);
         const db = resolveDb(program);
@@ -60,6 +53,7 @@ export function registerTaskCommand(program: Command): void {
 
         const t = insertTask(db, goalId, title, opts.desc, {
           estimate: opts.estimate,
+          repo: opts.repo,
         });
         const id = formatTaskId(goalId, t.id);
         outputSuccess(ctx, { ...t, shortId: id }, `Created task ${id}: ${t.title}`);
@@ -71,10 +65,11 @@ export function registerTaskCommand(program: Command): void {
     .argument("[goal-id]", "Filter by goal (e.g. G01)")
     .option("-s, --status <status>", "Filter by status")
     .option("--claimed-by <agent>", "Filter by agent")
+    .option("-r, --repo <name>", "Filter by repo/role")
     .action(
       (
         goalIdStr: string | undefined,
-        opts: { status?: string; claimedBy?: string },
+        opts: { status?: string; claimedBy?: string; repo?: string },
       ) => {
         const ctx = getCtx(program);
         const db = resolveDb(program);
@@ -83,6 +78,7 @@ export function registerTaskCommand(program: Command): void {
           goalId: goalIdStr ? parseGoalNum(goalIdStr) : undefined,
           status: opts.status,
           claimedBy: opts.claimedBy,
+          repo: opts.repo,
         });
 
         const data = tasks.map((t) => ({
@@ -142,6 +138,7 @@ export function registerTaskCommand(program: Command): void {
         ["Description", t.description || "(none)"],
         ["Status", t.status],
         ["Claimed By", t.claimed_by ?? "(none)"],
+        ["Repo", t.repo ?? "(none)"],
         ["Estimate", t.estimate ?? "(none)"],
       ];
 
@@ -170,10 +167,11 @@ export function registerTaskCommand(program: Command): void {
     .option("-t, --title <text>", "New title")
     .option("-d, --desc <text>", "New description")
     .option("-e, --estimate <size>", "New estimate")
+    .option("-r, --repo <name>", "Repo/role this task belongs to")
     .action(
       (
         idStr: string,
-        opts: { title?: string; desc?: string; estimate?: string },
+        opts: { title?: string; desc?: string; estimate?: string; repo?: string },
       ) => {
         const ctx = getCtx(program);
         const db = resolveDb(program);
@@ -183,6 +181,7 @@ export function registerTaskCommand(program: Command): void {
           title: opts.title,
           description: opts.desc,
           estimate: opts.estimate,
+          repo: opts.repo,
         });
         if (!t) throw new NotFoundError("task", idStr);
         const shortId = formatTaskId(t.goal_id, t.id);
@@ -237,92 +236,6 @@ export function registerTaskCommand(program: Command): void {
       const afterNum = opts.first ? null : opts.after ? parseTaskNum(opts.after) : null;
       reorderTask(db, taskId, afterNum);
       outputSuccess(ctx, { id: idStr, reordered: true }, `Reordered task ${idStr}.`);
-    });
-
-  // td task items <task-id> add|done|undo|rm|list
-  const items = task
-    .command("items")
-    .description("Manage checklist items on a task");
-
-  items
-    .command("add")
-    .argument("<task-id>", "Task ID (e.g. G01.T001)")
-    .argument("<title>", "Item description")
-    .option("-r, --role <name>", "Role this item belongs to (defaults to current repo's role)")
-    .action((idStr: string, title: string, opts: { role?: string }) => {
-      const ctx = getCtx(program);
-      const db = resolveDb(program);
-      const resolved = resolveWorkspace(program.opts().workspace);
-      const role = opts.role ?? resolved.role;
-      const taskId = parseTaskNum(idStr);
-      if (!findTaskById(db, taskId)) throw new NotFoundError("task", idStr);
-      const item = insertTaskItem(db, taskId, title, role);
-      outputSuccess(
-        ctx,
-        item,
-        `  ${item.id}. [ ] ${item.title}${item.repo ? ` (${item.repo})` : ""}`,
-      );
-    });
-
-  items
-    .command("done")
-    .argument("<item-id>", "Item ID")
-    .action((idStr: string) => {
-      const ctx = getCtx(program);
-      const db = resolveDb(program);
-      const item = markTaskItemDone(db, Number(idStr));
-      if (!item) throw new NotFoundError("task item", idStr);
-      outputSuccess(ctx, item, `  ${item.id}. [x] ${item.title}`);
-    });
-
-  items
-    .command("undo")
-    .argument("<item-id>", "Item ID")
-    .action((idStr: string) => {
-      const ctx = getCtx(program);
-      const db = resolveDb(program);
-      const item = markTaskItemUndone(db, Number(idStr));
-      if (!item) throw new NotFoundError("task item", idStr);
-      outputSuccess(ctx, item, `  ${item.id}. [ ] ${item.title}`);
-    });
-
-  items
-    .command("rm")
-    .argument("<item-id>", "Item ID")
-    .action((idStr: string) => {
-      const ctx = getCtx(program);
-      const db = resolveDb(program);
-      const id = Number(idStr);
-      const deleted = deleteTaskItem(db, id);
-      if (!deleted) throw new NotFoundError("task item", idStr);
-      outputSuccess(ctx, { id, deleted: true }, `Removed item ${id}.`);
-    });
-
-  items
-    .command("list")
-    .argument("<task-id>", "Task ID (e.g. G01.T001)")
-    .action((idStr: string) => {
-      const ctx = getCtx(program);
-      const db = resolveDb(program);
-      const taskId = parseTaskNum(idStr);
-      if (!findTaskById(db, taskId)) throw new NotFoundError("task", idStr);
-      const taskItems = findTaskItems(db, taskId);
-
-      if (ctx.json) {
-        outputSuccess(ctx, taskItems, "");
-        return;
-      }
-
-      if (taskItems.length === 0) {
-        outputSuccess(ctx, [], "No items on this task.");
-        return;
-      }
-
-      const lines = taskItems.map(
-        (i) =>
-          `  ${i.id}. [${i.done ? "x" : " "}] ${i.title}${i.repo ? ` (${i.repo})` : ""}`,
-      );
-      outputSuccess(ctx, taskItems, lines.join("\n"));
     });
 
   // td task depends <task-id> --on <dependency-id>

@@ -1,5 +1,7 @@
 import type { Command } from "commander";
+import fs from "node:fs";
 import { resolveWorkspace } from "../config/binding.js";
+import { getWorkspaceDbPath } from "../config/index.js";
 import { initializeDb } from "../db/index.js";
 import { createServer } from "../server/index.js";
 import net from "node:net";
@@ -30,7 +32,13 @@ export function registerUiCommand(program: Command): void {
     .option("--port <number>", "Port number (default: auto-detect)", "0")
     .action(async (opts: { port: string }) => {
       const resolved = resolveWorkspace(program.opts().workspace);
-      initializeDb(resolved.name);
+      const dbPath = getWorkspaceDbPath(resolved.name);
+
+      // Only run full init if the db doesn't exist yet.
+      // For existing dbs, the server's per-request connections handle migrations.
+      if (!fs.existsSync(dbPath)) {
+        initializeDb(resolved.name);
+      }
 
       const preferred = Number(opts.port) || 24242;
       const port = await findOpenPort(preferred);

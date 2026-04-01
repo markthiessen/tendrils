@@ -105,8 +105,19 @@ export function ArchitectureDiagram() {
       ) : data.mermaid_source ? (
         <div className="architecture-diagram" ref={diagramRef} />
       ) : (
-        <div className="architecture-empty">
-          No architecture diagram yet. Click "Create Diagram" to add one using Mermaid syntax.
+        <div className="empty-state" style={{ padding: "40px 24px" }}>
+          <h2>No architecture diagram yet</h2>
+          <p>Use <code>/td-discover</code> in Claude Code to analyze your codebase and generate a diagram automatically.</p>
+          <pre style={{ marginTop: 16, textAlign: "left", display: "inline-block", background: "#1e293b", padding: "16px 24px", borderRadius: 8, fontSize: 13, lineHeight: 1.8 }}>
+{`# Or set one manually
+td arch set "graph LR
+  web[Web Frontend] --> api[API]
+  api --> db[(Database)]"
+
+# Add notes to components
+td arch note api "Express + TypeScript"
+td arch note db "SQLite with WAL mode"`}
+          </pre>
         </div>
       )}
 

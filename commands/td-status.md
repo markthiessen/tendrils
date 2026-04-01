@@ -26,9 +26,8 @@ Provide a concise status summary:
 
 1. **In Progress**: What tasks are currently being worked on and by whom
 2. **Blocked**: Anything that's blocked and why
-3. **Up Next**: The highest-priority ready items (what `td next` would return)
-4. **Cross-Repo Progress**: For in-progress tasks, check their items (`td task items <id> list`) to show which repos have completed their part and which still have work remaining
-5. **Recent Completions**: What was recently finished
-6. **Key Decisions**: Highlight any recently recorded decisions that affect current work
+3. **Up Next**: The highest-priority ready tasks (what `td next` would return)
+4. **Recent Completions**: What was recently finished
+5. **Key Decisions**: Highlight any recently recorded decisions that affect current work
 
 Keep it brief — this is a quick check-in, not a deep analysis.

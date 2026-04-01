@@ -2,37 +2,24 @@ import { useState, useEffect, useCallback } from "react";
 import { get, type Envelope } from "../api/client";
 import { useEventSource } from "./useEventSource";
 
-export interface StoryItemData {
-  id: number;
-  story_id: number;
-  title: string;
-  repo: string | null;
-  done: number;
-}
-
-export interface StoryData {
-  id: number;
-  task_id: number;
-  seq: number;
-  title: string;
-  description: string;
-  status: string;
-  claimed_by: string | null;
-  estimate: string | null;
-  shortId: string;
-  items: StoryItemData[];
-}
+export type TaskStatus =
+  | "backlog" | "ready" | "claimed" | "in-progress"
+  | "blocked" | "review" | "done" | "cancelled";
 
 export interface TaskData {
   id: number;
-  activity_id: number;
+  goal_id: number;
   seq: number;
   title: string;
+  description: string;
+  status: TaskStatus;
+  claimed_by: string | null;
+  estimate: string | null;
+  repo: string | null;
   shortId: string;
-  stories: StoryData[];
 }
 
-export interface ActivityData {
+export interface GoalData {
   id: number;
   seq: number;
   title: string;
@@ -41,12 +28,11 @@ export interface ActivityData {
 }
 
 export interface MapData {
-  activities: ActivityData[];
+  goals: GoalData[];
 }
 
 const MAP_EVENTS = [
-  "story.created", "story.updated", "story.deleted",
-  "activity.created", "activity.updated", "activity.deleted",
+  "goal.created", "goal.updated", "goal.deleted",
   "task.created", "task.updated", "task.deleted",
   "workspace.switched",
 ];

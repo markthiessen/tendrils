@@ -55,18 +55,18 @@ If this is a fresh start, discuss with the user:
 # New goal if needed
 td goal add "Goal Name"
 
-# Tasks as vertical slices (user-visible outcomes, not layer work)
-td task add G01 "User can do X" --desc "Acceptance criteria"
+# Tasks as vertical slices — scope each task to a repo with --repo
+td task add G01 "POST /api/endpoint with validation" --repo data-api --desc "Acceptance criteria"
+td task add G01 "Form component with error handling" --repo web --desc "Acceptance criteria"
 
-# Checklist items for each repo that needs to contribute
-td task items G01.T001 add "POST /api/endpoint with validation" --role data-api
-td task items G01.T001 add "Form component with error handling" --role web
+# Tasks without --repo are unscoped (any repo can pick them up)
+td task add G01 "User can do X" --desc "Acceptance criteria"
 
 # Mark refined tasks as ready
 td task status G01.T001 ready
 ```
 
-Every repo that needs to contribute should have at least one checklist item tagged with its role.
+In multi-repo workspaces, create separate tasks for each repo's contribution using `--repo`. This lets each repo pick up and complete its own tasks independently.
 
 ### Step 4: Record decisions
 
@@ -88,8 +88,8 @@ Show the updated map and ask if anything needs adjusting.
 - **Build on conversation context** — if a plan was already discussed, don't restart from scratch
 - **Tasks are vertical slices** — "User can log in", not "Login API" + "Login UI"
 - Keep tasks small — each should be completable in a single session
-- **Add checklist items for each repo** — use the role as the `--role` value
-- Use decisions and architecture to write informed checklist items
+- **Scope tasks to repos** with `--repo` in multi-repo workspaces — each repo gets its own tasks
+- Use decisions and architecture to write informed task descriptions
 - Order tasks by dependency and priority
 - Every task should have clear "done" criteria in its description
 - Use dependencies (`td task depends G01.T002 --on G01.T001`) when order matters

@@ -2,7 +2,7 @@ import type { Command } from "commander";
 import { resolveWorkspace, findRepoRoot } from "../config/binding.js";
 import { getDb } from "../db/index.js";
 import { findAllRepos } from "../db/repo.js";
-import { findTaskById } from "../db/task.js";
+import { findTaskById, findNextTask } from "../db/task.js";
 import { insertLogEntry } from "../db/log.js";
 import {
   getUnsatisfiedDependencies,
@@ -77,54 +77,13 @@ export function registerWorkflowCommands(program: Command): void {
   program
     .command("next")
     .description("Show the highest-priority ready task to work on")
-    .option("--role <name>", "Prioritize tasks with incomplete items for this role (auto-detected from binding)")
-    .action((opts: { role?: string }) => {
+    .option("--repo <name>", "Prioritize tasks scoped to this repo/role (auto-detected from binding)")
+    .action((opts: { repo?: string }) => {
       const ctx = getCtx(program);
       const resolved = resolveWorkspace(program.opts().workspace);
       const db = getDb(resolved.name);
-      const repo = opts.role ?? resolved.role;
-
-      // Auto-unblock tasks whose repo items are now complete
-      if (repo) {
-        autoUnblockTasks(db, repo);
-      }
-
-      // Prioritize tasks with incomplete items for this repo
-      const repoFilter = repo
-        ? `AND t.id IN (SELECT task_id FROM task_items WHERE repo = '${repo.replace(/'/g, "''")}' AND done = 0)`
-        : "";
-
-      const depFilter = `AND t.id NOT IN (
-        SELECT td.task_id FROM task_dependencies td
-        JOIN tasks dep ON dep.id = td.depends_on_id
-        WHERE dep.status != 'done'
-      )`;
-
-      let task = db
-        .prepare(
-          `SELECT t.* FROM tasks t
-           WHERE t.status = 'ready'
-           ${repoFilter}
-           ${depFilter}
-           ORDER BY
-             t.goal_id, t.seq
-           LIMIT 1`,
-        )
-        .get() as any;
-
-      // Fall back to any ready task if no repo-specific matches
-      if (!task && repo) {
-        task = db
-          .prepare(
-            `SELECT t.* FROM tasks t
-             WHERE t.status = 'ready'
-             ${depFilter}
-             ORDER BY
-               t.goal_id, t.seq
-             LIMIT 1`,
-          )
-          .get() as any;
-      }
+      const repo = opts.repo ?? resolved.role;
+      const task = findNextTask(db, repo ?? undefined);
 
       if (task) {
         const shortId = formatTaskId(task.goal_id, task.id);
@@ -139,45 +98,6 @@ export function registerWorkflowCommands(program: Command): void {
       outputSuccess(ctx, null, "Nothing ready to work on.");
     });
 
-}
-
-/**
- * Find blocked tasks where the blocking repo's checklist items are now all
- * done, and move them back to in-progress automatically.
- */
-export function autoUnblockTasks(
-  db: import("../db/compat.js").Database,
-  repo: string,
-): void {
-  db.transaction(() => {
-    const toUnblock = db
-      .prepare(
-        `SELECT t.id, t.goal_id
-         FROM tasks t
-         WHERE t.status = 'blocked'
-           AND t.id IN (SELECT DISTINCT task_id FROM task_items)
-           AND t.id NOT IN (
-             SELECT task_id FROM task_items WHERE repo != ? AND done = 0
-           )`,
-      )
-      .all(repo) as { id: number; goal_id: number }[];
-
-    for (const task of toUnblock) {
-      db.prepare(
-        `UPDATE tasks SET status = 'in-progress', blocked_reason = NULL,
-         updated_at = datetime('now') WHERE id = ?`,
-      ).run(task.id);
-
-      insertLogEntry(
-        db, "task", task.id,
-        `Auto-unblocked: other repo items are complete`,
-        undefined, "blocked", "in-progress",
-      );
-
-      const shortId = formatTaskId(task.goal_id, task.id);
-      console.error(`Unblocked ${shortId} — blocking items resolved`);
-    }
-  })();
 }
 
 export function claimTask(

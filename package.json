@@ -1,7 +1,7 @@
 {
   "name": "tendrils",
   "version": "0.1.0",
-  "description": "Product story map management for LLM agent collaboration",
+  "description": "Work coordination for LLM agent collaboration",
   "type": "module",
   "bin": {
     "td": "./dist/index.js"
@@ -21,7 +21,7 @@
     "test:watch": "vitest"
   },
   "keywords": [
-    "storymap",
+    "taskmap",
     "cli",
     "llm",
     "agents",

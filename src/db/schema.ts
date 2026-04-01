@@ -191,6 +191,9 @@ export const SCHEMA_V8 = `
 -- Goals replace Activities (the "why")
 -- Tasks replace Stories (the claimable unit of work)
 -- The old "tasks" middle layer is removed
+-- Wrapped in a transaction so a partial failure doesn't corrupt the database.
+
+BEGIN;
 
 -- Create goals table from activities
 CREATE TABLE IF NOT EXISTS goals (
@@ -314,6 +317,18 @@ ALTER TABLE decisions_new RENAME TO decisions;
 CREATE INDEX IF NOT EXISTS idx_decisions_tags ON decisions(tags);
 
 INSERT OR IGNORE INTO schema_version (version) VALUES (8);
+
+COMMIT;
+`;
+
+export const SCHEMA_V9 = `
+-- Flatten to tasks only: remove task_items, add repo column to tasks
+BEGIN;
+ALTER TABLE tasks ADD COLUMN repo TEXT;
+DROP INDEX IF EXISTS idx_task_items_task;
+DROP TABLE IF EXISTS task_items;
+INSERT OR IGNORE INTO schema_version (version) VALUES (9);
+COMMIT;
 `;
 
 // Per-repo decisions database schema (lives at ~/.tendrils/repos/<hash>/decisions.db)

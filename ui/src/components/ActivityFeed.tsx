@@ -1,7 +1,7 @@
 import type { LogEntry } from "../hooks/useActivityFeed";
 
 function formatEntity(entry: LogEntry): string {
-  return `S${entry.entity_id}`;
+  return `T${entry.entity_id}`;
 }
 
 export function ActivityFeed({ entries }: { entries: LogEntry[] }) {

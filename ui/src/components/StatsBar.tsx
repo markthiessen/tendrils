@@ -1,22 +1,20 @@
 import type { MapData } from "../hooks/useStoryMap";
 
 export function StatsBar({ data }: { data: MapData }) {
-  const allStories = data.activities.flatMap((a) =>
-    a.tasks.flatMap((t) => t.stories),
-  );
+  const allTasks = data.goals.flatMap((g) => g.tasks);
 
   const counts: Record<string, number> = {};
-  for (const s of allStories) {
-    counts[s.status] = (counts[s.status] ?? 0) + 1;
+  for (const t of allTasks) {
+    counts[t.status] = (counts[t.status] ?? 0) + 1;
   }
 
   return (
     <div className="stats-bar">
       <span className="stat">
-        {data.activities.length} activities
+        {data.goals.length} goals
       </span>
       <span className="stat-separator" />
-      <span className="stat">{allStories.length} stories</span>
+      <span className="stat">{allTasks.length} tasks</span>
       {Object.entries(counts).map(([status, count]) => (
         <span key={status} className="stat stat-detail">
           {status}: {count}

@@ -1,6 +1,5 @@
 import type { FastifyInstance } from "fastify";
 import { insertTask, findAllTasks, findTaskById, updateTask, deleteTask, moveTask } from "../../db/task.js";
-import { insertTaskItem, findTaskItems, markTaskItemDone, markTaskItemUndone, deleteTaskItem } from "../../db/task-item.js";
 import { insertLogEntry } from "../../db/log.js";
 import { validateTaskTransition } from "../../model/status.js";
 import type { TaskStatus } from "../../model/types.js";
@@ -27,17 +26,18 @@ export function registerTaskRoutes(app: FastifyInstance, ctx: ServerContext) {
     });
   });
 
-  app.post<{ Body: { goalId: number; title: string; description?: string; estimate?: string } }>("/api/tasks", (req) => {
+  app.post<{ Body: { goalId: number; title: string; description?: string; estimate?: string; repo?: string } }>("/api/tasks", (req) => {
     return ctx.withDb((db) => {
       const t = insertTask(db, req.body.goalId, req.body.title, req.body.description ?? "", {
         estimate: req.body.estimate,
+        repo: req.body.repo,
       });
       emit("task.created", t);
       return { ok: true, data: t };
     });
   });
 
-  app.put<{ Params: { id: string }; Body: { title?: string; description?: string; estimate?: string | null } }>("/api/tasks/:id", (req) => {
+  app.put<{ Params: { id: string }; Body: { title?: string; description?: string; estimate?: string | null; repo?: string | null } }>("/api/tasks/:id", (req) => {
     return ctx.withDb((db) => {
       const t = updateTask(db, Number(req.params.id), req.body);
       if (!t) return { ok: false, error: { code: "NOT_FOUND", message: "Task not found" } };
@@ -141,54 +141,4 @@ export function registerTaskRoutes(app: FastifyInstance, ctx: ServerContext) {
     });
   });
 
-  // Task items (checklist)
-  app.get<{ Params: { id: string } }>("/api/tasks/:id/items", (req) => {
-    return ctx.withDb((db) => {
-      const taskId = Number(req.params.id);
-      if (!findTaskById(db, taskId)) {
-        return { ok: false, error: { code: "NOT_FOUND", message: "Task not found" } };
-      }
-      return { ok: true, data: findTaskItems(db, taskId) };
-    });
-  });
-
-  app.post<{ Params: { id: string }; Body: { title: string; repo?: string } }>("/api/tasks/:id/items", (req) => {
-    return ctx.withDb((db) => {
-      const taskId = Number(req.params.id);
-      if (!findTaskById(db, taskId)) {
-        return { ok: false, error: { code: "NOT_FOUND", message: "Task not found" } };
-      }
-      const item = insertTaskItem(db, taskId, req.body.title, req.body.repo);
-      emit("task.updated", { id: taskId });
-      return { ok: true, data: item };
-    });
-  });
-
-  app.post<{ Params: { id: string; itemId: string } }>("/api/tasks/:id/items/:itemId/done", (req) => {
-    return ctx.withDb((db) => {
-      const item = markTaskItemDone(db, Number(req.params.itemId));
-      if (!item) return { ok: false, error: { code: "NOT_FOUND", message: "Item not found" } };
-      emit("task.updated", { id: Number(req.params.id) });
-      return { ok: true, data: item };
-    });
-  });
-
-  app.post<{ Params: { id: string; itemId: string } }>("/api/tasks/:id/items/:itemId/undo", (req) => {
-    return ctx.withDb((db) => {
-      const item = markTaskItemUndone(db, Number(req.params.itemId));
-      if (!item) return { ok: false, error: { code: "NOT_FOUND", message: "Item not found" } };
-      emit("task.updated", { id: Number(req.params.id) });
-      return { ok: true, data: item };
-    });
-  });
-
-  app.delete<{ Params: { id: string; itemId: string } }>("/api/tasks/:id/items/:itemId", (req) => {
-    return ctx.withDb((db) => {
-      const id = Number(req.params.itemId);
-      const deleted = deleteTaskItem(db, id);
-      if (!deleted) return { ok: false, error: { code: "NOT_FOUND", message: "Item not found" } };
-      emit("task.updated", { id: Number(req.params.id) });
-      return { ok: true, data: { id, deleted: true } };
-    });
-  });
 }

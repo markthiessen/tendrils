@@ -14,7 +14,7 @@ export interface LogEntry {
 }
 
 const FEED_EVENTS = [
-  "log.created", "story.updated", "workspace.switched",
+  "log.created", "task.updated", "workspace.switched",
 ];
 
 export function useActivityFeed() {
