@@ -1,8 +1,8 @@
 # Tendrils (`td`)
 
-A CLI tool for managing product story maps that LLM agents can collaborate on.
+A CLI tool for managing work that LLM agents can collaborate on across repos.
 
-Tendrils organizes work as a **story map**: Activities > Tasks > Stories. Agents can claim work, update status, and log progress — all from the command line with structured JSON output.
+Tendrils organizes work as a **map**: Goals > Tasks. Agents can claim work, update status, and log progress — all from the command line with structured JSON output.
 
 ## Install
 
@@ -32,28 +32,24 @@ td init my_project --role api
 
 This creates a workspace database at `~/.tendrils/workspaces/my-project/map.db`, binds the current directory via `.tendrils/config.toml`, and adds `.tendrils/` to `.gitignore`.
 
-### 2. Build a story map
+### 2. Build a map
 
 ```bash
-# Add activities (top-level goals)
-td activity add "User Authentication"
-td activity add "Payment Processing"
+# Add goals (high-level outcomes)
+td goal add "User Authentication"
+td goal add "Payment Processing"
 
-# Add tasks under an activity
-td task add A01 "Login Flow"
-td task add A01 "Registration"
-
-# Add stories under a task
-td story add A01.T01 "Email/password login"
-td story add A01.T01 "OAuth2 provider support"
-td story add A01.T02 "Sign-up form"
+# Add tasks under a goal
+td task add G01 "Email/password login"
+td task add G01 "OAuth2 provider support"
+td task add G01 "Sign-up form"
 
 # Add checklist items scoped to repos
-td story items A01.T01.S001 add "POST /auth/login endpoint" --role api
-td story items A01.T01.S001 add "Login form component" --role web
+td task items G01.T001 add "POST /auth/login endpoint" --role api
+td task items G01.T001 add "Login form component" --role web
 
-# Mark stories as ready
-td story status A01.T01.S001 ready
+# Mark tasks as ready
+td task status G01.T001 ready
 ```
 
 ### 3. Agent workflow
@@ -62,50 +58,48 @@ td story status A01.T01.S001 ready
 # What should I work on next?
 td next --json
 
-# Claim a story
-td story claim A01.T01.S001 --agent claude-1
+# Claim a task
+td task claim G01.T001 --agent claude-1
 
 # Update status
-td story status A01.T01.S001 in-progress
-td log A01.T01.S001 "Implemented email auth in src/auth.ts"
+td task status G01.T001 in-progress
+td log G01.T001 "Implemented email auth in src/auth.ts"
 
 # Mark done
-td story status A01.T01.S001 done
+td task status G01.T001 done
 ```
 
 ### 4. Visualize
 
 ```bash
-td map                  # Render the story map
+td map                  # Render the map
 td stats                # Summary statistics
 td status               # Show current repo and workspace config
 ```
 
 ## Concepts
 
-### Story Map Hierarchy
+### Map Hierarchy
 
 ```
-Activity (A01)          — a high-level user goal ("User Authentication")
-  └─ Task (A01.T01)    — a step within the activity ("Login Flow")
-       └─ Story (A01.T01.S001) — an implementation item ("OAuth2 support")
+Goal (G01)              — a high-level outcome ("User Authentication")
+  └─ Task (G01.T001)   — a claimable unit of work ("OAuth2 support")
 ```
 
-Activities form the horizontal backbone. Tasks hang below them. Stories stack vertically under tasks, ordered by priority.
+Goals form the horizontal backbone. Tasks stack vertically under goals, ordered by priority.
 
 ### Hierarchical IDs
 
 Every item gets a stable, human-readable ID:
 
-| Entity   | Format         | Example          |
-|----------|----------------|------------------|
-| Activity | `A{nn}`        | `A01`            |
-| Task     | `A{nn}.T{nn}`  | `A01.T02`        |
-| Story    | `A{nn}.T{nn}.S{nnn}` | `A01.T02.S001` |
+| Entity | Format         | Example    |
+|--------|----------------|------------|
+| Goal   | `G{nn}`        | `G01`      |
+| Task   | `G{nn}.T{nnn}` | `G01.T001` |
 
-Fully qualified with workspace: `my_project::A01.T02.S001`
+Fully qualified with workspace: `my_project::G01.T001`
 
-### Story Statuses
+### Task Statuses
 
 ```
 backlog → ready → claimed → in-progress → review → done
@@ -153,14 +147,14 @@ Every command supports `--json` for machine-readable output:
 
 ```bash
 td next --json
-# {"ok":true,"data":{"id":"A01.T01.S001","title":"OAuth2 support","status":"ready",...}}
+# {"ok":true,"data":{"id":"G01.T001","title":"OAuth2 support","status":"ready",...}}
 ```
 
 Errors also return structured JSON:
 
 ```bash
-td story claim A01.T01.S001 --json
-# {"ok":false,"error":{"code":"ALREADY_CLAIMED","message":"Story is claimed by claude-2"}}
+td task claim G01.T001 --json
+# {"ok":false,"error":{"code":"ALREADY_CLAIMED","message":"Task is claimed by claude-2"}}
 ```
 
 ## Claude Code Integration

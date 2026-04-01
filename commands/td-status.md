@@ -1,12 +1,12 @@
 ---
-description: Show tendrils story map status and summarize progress
+description: Show tendrils map status and summarize progress
 ---
 
-You are providing a quick status update on the tendrils story map.
+You are providing a quick status update on the tendrils map.
 
-## Story Map
+## Map
 
-!`td map 2>/dev/null || echo "No story map found. Run 'td init' to get started."`
+!`td map 2>/dev/null || echo "No map found. Run 'td init' to get started."`
 
 ## Statistics
 
@@ -24,10 +24,10 @@ You are providing a quick status update on the tendrils story map.
 
 Provide a concise status summary:
 
-1. **In Progress**: What stories are currently being worked on and by whom
+1. **In Progress**: What tasks are currently being worked on and by whom
 2. **Blocked**: Anything that's blocked and why
 3. **Up Next**: The highest-priority ready items (what `td next` would return)
-4. **Cross-Repo Progress**: For in-progress stories, check their items (`td story items <id> list`) to show which repos have completed their part and which still have work remaining
+4. **Cross-Repo Progress**: For in-progress tasks, check their items (`td task items <id> list`) to show which repos have completed their part and which still have work remaining
 5. **Recent Completions**: What was recently finished
 6. **Key Decisions**: Highlight any recently recorded decisions that affect current work
 

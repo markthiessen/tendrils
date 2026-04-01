@@ -1,42 +1,33 @@
 import type { FastifyInstance } from "fastify";
-import { findAllActivities } from "../../db/activity.js";
+import { findAllGoals } from "../../db/goal.js";
 import { findAllTasks } from "../../db/task.js";
-import { findAllStories } from "../../db/story.js";
-import { findStoryItems } from "../../db/story-item.js";
-import { formatActivityId, formatTaskId, formatStoryId } from "../../model/id.js";
+import { findTaskItems } from "../../db/task-item.js";
+import { formatGoalId, formatTaskId } from "../../model/id.js";
 import type { ServerContext } from "../context.js";
 
 export function registerMapRoutes(app: FastifyInstance, ctx: ServerContext) {
   app.get("/api/map", () => {
     return ctx.withDb((db) => {
-      const activities = findAllActivities(db);
+      const goals = findAllGoals(db);
       const tasks = findAllTasks(db);
-      const stories = findAllStories(db);
 
-      const mapData = activities.map((a) => {
-        const actTasks = tasks.filter((t) => t.activity_id === a.id);
+      const mapData = goals.map((g) => {
+        const goalTasks = tasks.filter((t) => t.goal_id === g.id);
         return {
-          ...a,
-          shortId: formatActivityId(a.id),
-          tasks: actTasks.map((t) => {
-            const taskStories = stories.filter((s) => s.task_id === t.id);
-            return {
-              ...t,
-              shortId: formatTaskId(a.id, t.id),
-              stories: taskStories.map((s) => ({
-                ...s,
-                shortId: formatStoryId(a.id, t.id, s.id),
-                items: findStoryItems(db, s.id),
-              })),
-            };
-          }),
+          ...g,
+          shortId: formatGoalId(g.id),
+          tasks: goalTasks.map((t) => ({
+            ...t,
+            shortId: formatTaskId(g.id, t.id),
+            items: findTaskItems(db, t.id),
+          })),
         };
       });
 
       return {
         ok: true,
         data: {
-          activities: mapData,
+          goals: mapData,
         },
       };
     });
@@ -44,19 +35,17 @@ export function registerMapRoutes(app: FastifyInstance, ctx: ServerContext) {
 
   app.get("/api/stats", () => {
     return ctx.withDb((db) => {
-      const activities = findAllActivities(db);
+      const goals = findAllGoals(db);
       const tasks = findAllTasks(db);
-      const stories = findAllStories(db);
 
-      const storyCounts: Record<string, number> = {};
-      for (const s of stories) storyCounts[s.status] = (storyCounts[s.status] ?? 0) + 1;
+      const taskCounts: Record<string, number> = {};
+      for (const t of tasks) taskCounts[t.status] = (taskCounts[t.status] ?? 0) + 1;
 
       return {
         ok: true,
         data: {
-          activities: activities.length,
-          tasks: tasks.length,
-          stories: { total: stories.length, ...storyCounts },
+          goals: goals.length,
+          tasks: { total: tasks.length, ...taskCounts },
         },
       };
     });

@@ -1,11 +1,11 @@
 ---
-description: Plan new work on the tendrils story map
-argument-hint: [goal]
+description: Plan new work on the tendrils map
+argument-hint: [what to plan]
 ---
 
-You are adding planned work to the tendrils story map. If the goal has already been discussed in this conversation, build on that context — don't re-ask questions that were already answered. Add cross-repo knowledge and decisions to improve on what was discussed.
+You are adding planned work to the tendrils map. If the goal has already been discussed in this conversation, build on that context — don't re-ask questions that were already answered. Add cross-repo knowledge and decisions to improve on what was discussed.
 
-## Current story map
+## Current map
 
 !`td map`
 
@@ -46,27 +46,24 @@ If the goal was already discussed in this conversation, use that context. Improv
 
 If this is a fresh start, discuss with the user:
 - What is the goal or feature?
-- Does it fit within an existing activity, or is it a new one?
+- Does it fit within an existing goal, or is it a new one?
 - Which repos are involved?
 
-### Step 3: Populate the story map
+### Step 3: Populate the map
 
 ```bash
-# New activity if needed
-td activity add "Activity Name"
+# New goal if needed
+td goal add "Goal Name"
 
-# New tasks
-td task add A01 "Task Name"
-
-# Stories as vertical slices (user-visible outcomes, not layer work)
-td story add A01.T01 "User can do X" --desc "Acceptance criteria"
+# Tasks as vertical slices (user-visible outcomes, not layer work)
+td task add G01 "User can do X" --desc "Acceptance criteria"
 
 # Checklist items for each repo that needs to contribute
-td story items A01.T01.S001 add "POST /api/endpoint with validation" --role data-api
-td story items A01.T01.S001 add "Form component with error handling" --role web
+td task items G01.T001 add "POST /api/endpoint with validation" --role data-api
+td task items G01.T001 add "Form component with error handling" --role web
 
-# Mark refined stories as ready
-td story status A01.T01.S001 ready
+# Mark refined tasks as ready
+td task status G01.T001 ready
 ```
 
 Every repo that needs to contribute should have at least one checklist item tagged with its role.
@@ -89,11 +86,11 @@ Show the updated map and ask if anything needs adjusting.
 ## Guidelines
 
 - **Build on conversation context** — if a plan was already discussed, don't restart from scratch
-- **Stories are vertical slices** — "User can log in", not "Login API" + "Login UI"
-- Keep stories small — each should be completable in a single session
+- **Tasks are vertical slices** — "User can log in", not "Login API" + "Login UI"
+- Keep tasks small — each should be completable in a single session
 - **Add checklist items for each repo** — use the role as the `--role` value
 - Use decisions and architecture to write informed checklist items
-- Order stories by dependency and priority
-- Every story should have clear "done" criteria in its description
-- Group related stories under the same task
+- Order tasks by dependency and priority
+- Every task should have clear "done" criteria in its description
+- Use dependencies (`td task depends G01.T002 --on G01.T001`) when order matters
 - Record any new decisions that come out of planning

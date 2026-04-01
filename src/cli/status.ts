@@ -2,7 +2,6 @@ import type { Command } from "commander";
 import { resolveWorkspace, findRepoRoot } from "../config/binding.js";
 import { getDb } from "../db/index.js";
 import { findAllRepos } from "../db/repo.js";
-import { findStoryById } from "../db/story.js";
 import { findTaskById } from "../db/task.js";
 import { insertLogEntry } from "../db/log.js";
 import {
@@ -11,13 +10,13 @@ import {
   hasUnsatisfiedDependencies,
 } from "../db/dependency.js";
 import {
-  formatStoryId,
+  formatTaskId,
 } from "../model/id.js";
 import {
-  validateStoryTransition,
-  isValidStoryStatus,
+  validateTaskTransition,
+  isValidTaskStatus,
 } from "../model/status.js";
-import type { StoryStatus } from "../model/types.js";
+import type { TaskStatus } from "../model/types.js";
 import { NotFoundError, ConflictError, InvalidArgumentError } from "../errors.js";
 import { outputSuccess, renderKeyValue, type OutputContext } from "../output/index.js";
 import { getCtx, resolveDb } from "./util.js";
@@ -77,64 +76,62 @@ export function registerWorkflowCommands(program: Command): void {
   // td next
   program
     .command("next")
-    .description("Show the highest-priority ready story to work on")
-    .option("--role <name>", "Prioritize stories with incomplete items for this role (auto-detected from binding)")
+    .description("Show the highest-priority ready task to work on")
+    .option("--role <name>", "Prioritize tasks with incomplete items for this role (auto-detected from binding)")
     .action((opts: { role?: string }) => {
       const ctx = getCtx(program);
       const resolved = resolveWorkspace(program.opts().workspace);
       const db = getDb(resolved.name);
       const repo = opts.role ?? resolved.role;
 
-      // Auto-unblock stories whose repo items are now complete
+      // Auto-unblock tasks whose repo items are now complete
       if (repo) {
-        autoUnblockStories(db, repo);
+        autoUnblockTasks(db, repo);
       }
 
-      // Prioritize stories with incomplete items for this repo
+      // Prioritize tasks with incomplete items for this repo
       const repoFilter = repo
-        ? `AND s.id IN (SELECT story_id FROM story_items WHERE repo = '${repo.replace(/'/g, "''")}' AND done = 0)`
+        ? `AND t.id IN (SELECT task_id FROM task_items WHERE repo = '${repo.replace(/'/g, "''")}' AND done = 0)`
         : "";
 
-      const depFilter = `AND s.id NOT IN (
-        SELECT sd.story_id FROM story_dependencies sd
-        JOIN stories dep ON dep.id = sd.depends_on_id
+      const depFilter = `AND t.id NOT IN (
+        SELECT td.task_id FROM task_dependencies td
+        JOIN tasks dep ON dep.id = td.depends_on_id
         WHERE dep.status != 'done'
       )`;
 
-      let story = db
+      let task = db
         .prepare(
-          `SELECT s.*, t.activity_id FROM stories s
-           JOIN tasks t ON s.task_id = t.id
-           WHERE s.status = 'ready'
+          `SELECT t.* FROM tasks t
+           WHERE t.status = 'ready'
            ${repoFilter}
            ${depFilter}
            ORDER BY
-             t.activity_id, t.seq, s.seq
+             t.goal_id, t.seq
            LIMIT 1`,
         )
         .get() as any;
 
-      // Fall back to any ready story if no repo-specific matches
-      if (!story && repo) {
-        story = db
+      // Fall back to any ready task if no repo-specific matches
+      if (!task && repo) {
+        task = db
           .prepare(
-            `SELECT s.*, t.activity_id FROM stories s
-             JOIN tasks t ON s.task_id = t.id
-             WHERE s.status = 'ready'
+            `SELECT t.* FROM tasks t
+             WHERE t.status = 'ready'
              ${depFilter}
              ORDER BY
-               t.activity_id, t.seq, s.seq
+               t.goal_id, t.seq
              LIMIT 1`,
           )
           .get() as any;
       }
 
-      if (story) {
-        const shortId = formatStoryId(story.activity_id, story.task_id, story.id);
+      if (task) {
+        const shortId = formatTaskId(task.goal_id, task.id);
         outputSuccess(
           ctx,
-          { ...story, shortId, entityType: "story" },
-          `Next story: ${shortId} — ${story.title}`,
+          { ...task, shortId, entityType: "task" },
+          `Next task: ${shortId} — ${task.title}`,
         );
         return;
       }
@@ -145,133 +142,129 @@ export function registerWorkflowCommands(program: Command): void {
 }
 
 /**
- * Find blocked stories where the blocking repo's checklist items are now all
+ * Find blocked tasks where the blocking repo's checklist items are now all
  * done, and move them back to in-progress automatically.
  */
-export function autoUnblockStories(
+export function autoUnblockTasks(
   db: import("../db/compat.js").Database,
   repo: string,
 ): void {
   db.transaction(() => {
     const toUnblock = db
       .prepare(
-        `SELECT s.id, t.activity_id, s.task_id
-         FROM stories s
-         JOIN tasks t ON s.task_id = t.id
-         WHERE s.status = 'blocked'
-           AND s.id IN (SELECT DISTINCT story_id FROM story_items)
-           AND s.id NOT IN (
-             SELECT story_id FROM story_items WHERE repo != ? AND done = 0
+        `SELECT t.id, t.goal_id
+         FROM tasks t
+         WHERE t.status = 'blocked'
+           AND t.id IN (SELECT DISTINCT task_id FROM task_items)
+           AND t.id NOT IN (
+             SELECT task_id FROM task_items WHERE repo != ? AND done = 0
            )`,
       )
-      .all(repo) as { id: number; activity_id: number; task_id: number }[];
+      .all(repo) as { id: number; goal_id: number }[];
 
-    for (const story of toUnblock) {
+    for (const task of toUnblock) {
       db.prepare(
-        `UPDATE stories SET status = 'in-progress', blocked_reason = NULL,
+        `UPDATE tasks SET status = 'in-progress', blocked_reason = NULL,
          updated_at = datetime('now') WHERE id = ?`,
-      ).run(story.id);
+      ).run(task.id);
 
       insertLogEntry(
-        db, "story", story.id,
+        db, "task", task.id,
         `Auto-unblocked: other repo items are complete`,
         undefined, "blocked", "in-progress",
       );
 
-      const shortId = formatStoryId(story.activity_id, story.task_id, story.id);
+      const shortId = formatTaskId(task.goal_id, task.id);
       console.error(`Unblocked ${shortId} — blocking items resolved`);
     }
   })();
 }
 
-export function claimStory(
+export function claimTask(
   ctx: OutputContext,
   db: import("../db/compat.js").Database,
-  storyId: number,
+  taskId: number,
   agent?: string,
 ): void {
   const claim = db.transaction(() => {
-    const story = findStoryById(db, storyId);
-    if (!story) throw new NotFoundError("story", `S${storyId}`);
+    const task = findTaskById(db, taskId);
+    if (!task) throw new NotFoundError("task", `T${taskId}`);
 
-    if (story.status === "claimed" && story.claimed_by === agent) {
-      return story;
+    if (task.status === "claimed" && task.claimed_by === agent) {
+      return task;
     }
 
-    if (story.status === "claimed" && story.claimed_by !== agent) {
+    if (task.status === "claimed" && task.claimed_by !== agent) {
       throw new ConflictError(
-        `Story is already claimed by '${story.claimed_by}'.`,
-        { claimed_by: story.claimed_by, claimed_at: story.claimed_at },
+        `Task is already claimed by '${task.claimed_by}'.`,
+        { claimed_by: task.claimed_by, claimed_at: task.claimed_at },
       );
     }
 
-    validateStoryTransition(story.status, "claimed");
+    validateTaskTransition(task.status, "claimed");
 
     db.prepare(
-      `UPDATE stories SET status = 'claimed', claimed_by = ?, claimed_at = datetime('now'),
+      `UPDATE tasks SET status = 'claimed', claimed_by = ?, claimed_at = datetime('now'),
        updated_at = datetime('now') WHERE id = ?`,
-    ).run(agent ?? null, storyId);
+    ).run(agent ?? null, taskId);
 
-    insertLogEntry(db, "story", storyId, `Claimed by ${agent ?? "unknown"}`, agent, story.status, "claimed");
+    insertLogEntry(db, "task", taskId, `Claimed by ${agent ?? "unknown"}`, agent, task.status, "claimed");
 
-    return findStoryById(db, storyId)!;
+    return findTaskById(db, taskId)!;
   });
 
   const result = claim();
-  const task = findTaskById(db, result.task_id);
-  const shortId = formatStoryId(task?.activity_id ?? 0, result.task_id, result.id);
-  outputSuccess(ctx, { ...result, shortId }, `Claimed story ${shortId}.`);
+  const shortId = formatTaskId(result.goal_id, result.id);
+  outputSuccess(ctx, { ...result, shortId }, `Claimed task ${shortId}.`);
 }
 
-export function unclaimStory(
+export function unclaimTask(
   ctx: OutputContext,
   db: import("../db/compat.js").Database,
-  storyId: number,
+  taskId: number,
 ): void {
-  const story = findStoryById(db, storyId);
-  if (!story) throw new NotFoundError("story", `S${storyId}`);
+  const task = findTaskById(db, taskId);
+  if (!task) throw new NotFoundError("task", `T${taskId}`);
 
-  if (story.status !== "claimed") {
-    throw new InvalidArgumentError(`Story is not claimed (status: ${story.status}).`);
+  if (task.status !== "claimed") {
+    throw new InvalidArgumentError(`Task is not claimed (status: ${task.status}).`);
   }
 
   db.prepare(
-    `UPDATE stories SET status = 'ready', claimed_by = NULL, claimed_at = NULL,
+    `UPDATE tasks SET status = 'ready', claimed_by = NULL, claimed_at = NULL,
      updated_at = datetime('now') WHERE id = ?`,
-  ).run(storyId);
+  ).run(taskId);
 
-  insertLogEntry(db, "story", storyId, `Unclaimed (was ${story.claimed_by})`, story.claimed_by ?? undefined, "claimed", "ready");
+  insertLogEntry(db, "task", taskId, `Unclaimed (was ${task.claimed_by})`, task.claimed_by ?? undefined, "claimed", "ready");
 
-  const updated = findStoryById(db, storyId)!;
-  const task = findTaskById(db, updated.task_id);
-  const shortId = formatStoryId(task?.activity_id ?? 0, updated.task_id, updated.id);
-  outputSuccess(ctx, { ...updated, shortId }, `Unclaimed story ${shortId}.`);
+  const updated = findTaskById(db, taskId)!;
+  const shortId = formatTaskId(updated.goal_id, updated.id);
+  outputSuccess(ctx, { ...updated, shortId }, `Unclaimed task ${shortId}.`);
 }
 
-export function changeStoryStatus(
+export function changeTaskStatus(
   ctx: OutputContext,
   db: import("../db/compat.js").Database,
-  storyId: number,
+  taskId: number,
   newStatus: string,
   agent?: string,
   reason?: string,
 ): void {
-  if (!isValidStoryStatus(newStatus)) {
-    throw new InvalidArgumentError(`Invalid story status: '${newStatus}'.`);
+  if (!isValidTaskStatus(newStatus)) {
+    throw new InvalidArgumentError(`Invalid task status: '${newStatus}'.`);
   }
 
-  const story = findStoryById(db, storyId);
-  if (!story) throw new NotFoundError("story", `S${storyId}`);
+  const task = findTaskById(db, taskId);
+  if (!task) throw new NotFoundError("task", `T${taskId}`);
 
   // Idempotent
-  if (story.status === newStatus) {
-    const task = findTaskById(db, story.task_id);
-    const shortId = formatStoryId(task?.activity_id ?? 0, story.task_id, story.id);
-    outputSuccess(ctx, { ...story, shortId }, `Story ${shortId} is already '${newStatus}'.`);
+  if (task.status === newStatus) {
+    const shortId = formatTaskId(task.goal_id, task.id);
+    outputSuccess(ctx, { ...task, shortId }, `Task ${shortId} is already '${newStatus}'.`);
     return;
   }
 
-  validateStoryTransition(story.status, newStatus);
+  validateTaskTransition(task.status, newStatus);
 
   const sets = ["status = ?", "updated_at = datetime('now')"];
   const values: unknown[] = [newStatus];
@@ -279,7 +272,7 @@ export function changeStoryStatus(
   if (newStatus === "blocked" && reason) {
     sets.push("blocked_reason = ?");
     values.push(reason);
-  } else if (story.blocked_reason && newStatus !== "blocked") {
+  } else if (task.blocked_reason && newStatus !== "blocked") {
     sets.push("blocked_reason = NULL");
   }
 
@@ -288,54 +281,51 @@ export function changeStoryStatus(
     values.push(agent);
   }
 
-  values.push(storyId);
-  db.prepare(`UPDATE stories SET ${sets.join(", ")} WHERE id = ?`).run(...values);
+  values.push(taskId);
+  db.prepare(`UPDATE tasks SET ${sets.join(", ")} WHERE id = ?`).run(...values);
 
   const msg = reason ? `Status -> ${newStatus}: ${reason}` : `Status -> ${newStatus}`;
-  insertLogEntry(db, "story", storyId, msg, agent, story.status, newStatus);
+  insertLogEntry(db, "task", taskId, msg, agent, task.status, newStatus);
 
-  // Auto-block: if story moved to ready but has unsatisfied dependencies
+  // Auto-block: if task moved to ready but has unsatisfied dependencies
   if (newStatus === "ready") {
-    const unsatisfied = getUnsatisfiedDependencies(db, storyId);
+    const unsatisfied = getUnsatisfiedDependencies(db, taskId);
     if (unsatisfied.length > 0) {
       const depIds = unsatisfied.map((id) => {
-        const ds = findStoryById(db, id);
-        const dt = ds ? findTaskById(db, ds.task_id) : null;
-        return ds ? formatStoryId(dt?.activity_id ?? 0, ds.task_id, ds.id) : `S${id}`;
+        const dt = findTaskById(db, id);
+        return dt ? formatTaskId(dt.goal_id, dt.id) : `T${id}`;
       });
       const blockReason = `Waiting on dependencies: ${depIds.join(", ")}`;
 
       db.prepare(
-        `UPDATE stories SET status = 'blocked', blocked_reason = ?,
+        `UPDATE tasks SET status = 'blocked', blocked_reason = ?,
          updated_at = datetime('now') WHERE id = ?`,
-      ).run(blockReason, storyId);
+      ).run(blockReason, taskId);
 
-      insertLogEntry(db, "story", storyId, `Auto-blocked: ${blockReason}`, agent, "ready", "blocked");
+      insertLogEntry(db, "task", taskId, `Auto-blocked: ${blockReason}`, agent, "ready", "blocked");
 
-      const blocked = findStoryById(db, storyId)!;
-      const task = findTaskById(db, blocked.task_id);
-      const shortId = formatStoryId(task?.activity_id ?? 0, blocked.task_id, blocked.id);
-      outputSuccess(ctx, { ...blocked, shortId }, `Story ${shortId}: ${story.status} -> ready -> blocked (${blockReason})`);
+      const blocked = findTaskById(db, taskId)!;
+      const shortId = formatTaskId(blocked.goal_id, blocked.id);
+      outputSuccess(ctx, { ...blocked, shortId }, `Task ${shortId}: ${task.status} -> ready -> blocked (${blockReason})`);
       return;
     }
   }
 
-  // Auto-unblock: when a story reaches done, unblock dependents whose deps are now all satisfied
+  // Auto-unblock: when a task reaches done, unblock dependents whose deps are now all satisfied
   if (newStatus === "done") {
-    const dependents = findDependents(db, storyId);
+    const dependents = findDependents(db, taskId);
     for (const dep of dependents) {
-      const depStory = findStoryById(db, dep.story_id);
-      if (!depStory || depStory.status !== "blocked") continue;
-      if (hasUnsatisfiedDependencies(db, dep.story_id)) continue;
+      const depTask = findTaskById(db, dep.task_id);
+      if (!depTask || depTask.status !== "blocked") continue;
+      if (hasUnsatisfiedDependencies(db, dep.task_id)) continue;
 
       db.prepare(
-        `UPDATE stories SET status = 'ready', blocked_reason = NULL,
+        `UPDATE tasks SET status = 'ready', blocked_reason = NULL,
          updated_at = datetime('now') WHERE id = ?`,
-      ).run(dep.story_id);
+      ).run(dep.task_id);
 
-      const dt = findTaskById(db, depStory.task_id);
-      const depId = formatStoryId(dt?.activity_id ?? 0, depStory.task_id, depStory.id);
-      insertLogEntry(db, "story", dep.story_id, `Auto-unblocked: all dependencies satisfied`, agent, "blocked", "ready");
+      const depId = formatTaskId(depTask.goal_id, depTask.id);
+      insertLogEntry(db, "task", dep.task_id, `Auto-unblocked: all dependencies satisfied`, agent, "blocked", "ready");
 
       if (!ctx.quiet) {
         console.error(`Unblocked ${depId} — all dependencies now done`);
@@ -343,8 +333,7 @@ export function changeStoryStatus(
     }
   }
 
-  const updated = findStoryById(db, storyId)!;
-  const task = findTaskById(db, updated.task_id);
-  const shortId = formatStoryId(task?.activity_id ?? 0, updated.task_id, updated.id);
-  outputSuccess(ctx, { ...updated, shortId }, `Story ${shortId}: ${story.status} -> ${newStatus}`);
+  const updated = findTaskById(db, taskId)!;
+  const shortId = formatTaskId(updated.goal_id, updated.id);
+  outputSuccess(ctx, { ...updated, shortId }, `Task ${shortId}: ${task.status} -> ${newStatus}`);
 }

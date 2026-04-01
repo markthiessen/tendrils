@@ -6,9 +6,8 @@ import { fileURLToPath } from "node:url";
 import { subscribe } from "./sse.js";
 import { createContext } from "./context.js";
 import { emit } from "./sse.js";
-import { registerActivityRoutes } from "./routes/activities.js";
+import { registerGoalRoutes } from "./routes/goals.js";
 import { registerTaskRoutes } from "./routes/tasks.js";
-import { registerStoryRoutes } from "./routes/stories.js";
 import { registerWorkflowRoutes } from "./routes/workflow.js";
 import { registerMapRoutes } from "./routes/map.js";
 import { registerDecisionRoutes } from "./routes/decisions.js";
@@ -86,9 +85,8 @@ export async function createServer(name: string, port: number) {
   });
 
   // API routes
-  registerActivityRoutes(app, ctx);
+  registerGoalRoutes(app, ctx);
   registerTaskRoutes(app, ctx);
-  registerStoryRoutes(app, ctx);
   registerWorkflowRoutes(app, ctx);
   registerMapRoutes(app, ctx);
   registerDecisionRoutes(app, ctx);

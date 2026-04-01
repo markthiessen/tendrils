@@ -3,7 +3,7 @@ import type { WorkLogEntry } from "../model/types.js";
 
 export function insertLogEntry(
   db: Database,
-  entityType: "story",
+  entityType: "task",
   entityId: number,
   message: string,
   agent?: string,
@@ -24,7 +24,7 @@ export function insertLogEntry(
 
 export function findLogEntries(
   db: Database,
-  entityType: "story",
+  entityType: "task",
   entityId: number,
 ): WorkLogEntry[] {
   return db

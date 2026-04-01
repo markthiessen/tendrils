@@ -1,78 +1,61 @@
 import { describe, it, expect } from "vitest";
 import {
   parseId,
-  formatActivityId,
+  formatGoalId,
   formatTaskId,
-  formatStoryId,
   formatFullId,
 } from "../../src/model/id.js";
 
 describe("parseId", () => {
-  it("parses activity ID", () => {
-    expect(parseId("A01")).toEqual({ activity: 1, type: "activity" });
-    expect(parseId("A99")).toEqual({ activity: 99, type: "activity" });
+  it("parses goal ID", () => {
+    expect(parseId("G01")).toEqual({ goal: 1, type: "goal" });
+    expect(parseId("G99")).toEqual({ goal: 99, type: "goal" });
   });
 
   it("parses task ID", () => {
-    expect(parseId("A01.T02")).toEqual({
-      activity: 1,
+    expect(parseId("G01.T002")).toEqual({
+      goal: 1,
       task: 2,
       type: "task",
     });
   });
 
-  it("parses story ID", () => {
-    expect(parseId("A01.T02.S001")).toEqual({
-      activity: 1,
-      task: 2,
-      story: 1,
-      type: "story",
-    });
-  });
-
   it("parses project-qualified ID", () => {
-    expect(parseId("MyProject::A01.T02.S001")).toEqual({
+    expect(parseId("MyProject::G01.T001")).toEqual({
       project: "MyProject",
-      activity: 1,
-      task: 2,
-      story: 1,
-      type: "story",
+      goal: 1,
+      task: 1,
+      type: "task",
     });
   });
 
   it("throws on invalid ID", () => {
     expect(() => parseId("")).toThrow("Invalid ID");
     expect(() => parseId("X01")).toThrow("Invalid ID");
-    expect(() => parseId("A")).toThrow("Invalid ID");
-    expect(() => parseId("A01.S001")).toThrow("Invalid ID");
+    expect(() => parseId("G")).toThrow("Invalid ID");
+    expect(() => parseId("A01.T01.S001")).toThrow("Invalid ID");
     expect(() => parseId("B001")).toThrow("Invalid ID");
   });
 });
 
-describe("formatActivityId", () => {
+describe("formatGoalId", () => {
   it("formats with zero padding", () => {
-    expect(formatActivityId(1)).toBe("A01");
-    expect(formatActivityId(12)).toBe("A12");
+    expect(formatGoalId(1)).toBe("G01");
+    expect(formatGoalId(12)).toBe("G12");
   });
 });
 
 describe("formatTaskId", () => {
   it("formats hierarchically", () => {
-    expect(formatTaskId(1, 2)).toBe("A01.T02");
-  });
-});
-
-describe("formatStoryId", () => {
-  it("formats with 3-digit padding", () => {
-    expect(formatStoryId(1, 2, 3)).toBe("A01.T02.S003");
-    expect(formatStoryId(1, 2, 100)).toBe("A01.T02.S100");
+    expect(formatTaskId(1, 2)).toBe("G01.T002");
+    expect(formatTaskId(1, 100)).toBe("G01.T100");
   });
 });
 
 describe("formatFullId", () => {
   it("adds project prefix", () => {
-    expect(formatFullId("MyProject", "A01.T02.S001")).toBe(
-      "MyProject::A01.T02.S001",
+    expect(formatFullId("MyProject", "G01.T001")).toBe(
+      "MyProject::G01.T001",
     );
   });
 });

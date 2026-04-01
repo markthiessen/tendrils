@@ -26,7 +26,7 @@ function findOpenPort(preferred: number): Promise<number> {
 export function registerUiCommand(program: Command): void {
   program
     .command("ui")
-    .description("Launch the story map web UI")
+    .description("Launch the web UI")
     .option("--port <number>", "Port number (default: auto-detect)", "0")
     .action(async (opts: { port: string }) => {
       const resolved = resolveWorkspace(program.opts().workspace);

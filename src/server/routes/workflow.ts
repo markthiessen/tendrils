@@ -6,32 +6,30 @@ import type { ServerContext } from "../context.js";
 export function registerWorkflowRoutes(app: FastifyInstance, ctx: ServerContext) {
   app.get<{ Querystring: { repo?: string } }>("/api/next", (req) => {
     return ctx.withDb((db) => {
-      // Prioritize stories with incomplete items for this repo
+      // Prioritize tasks with incomplete items for this repo
       const repoFilter = req.query.repo
-        ? `AND s.id IN (SELECT story_id FROM story_items WHERE repo = '${req.query.repo.replace(/'/g, "''")}' AND done = 0)`
+        ? `AND t.id IN (SELECT task_id FROM task_items WHERE repo = '${req.query.repo.replace(/'/g, "''")}' AND done = 0)`
         : "";
 
-      let story = db.prepare(
-        `SELECT s.*, t.activity_id FROM stories s
-         JOIN tasks t ON s.task_id = t.id
-         WHERE s.status = 'ready'
+      let task = db.prepare(
+        `SELECT t.* FROM tasks t
+         WHERE t.status = 'ready'
          ${repoFilter}
-         ORDER BY t.activity_id, t.seq, s.seq
+         ORDER BY t.goal_id, t.seq
          LIMIT 1`,
       ).get() as any;
 
-      // Fall back to any ready story if no repo-specific matches
-      if (!story && req.query.repo) {
-        story = db.prepare(
-          `SELECT s.*, t.activity_id FROM stories s
-           JOIN tasks t ON s.task_id = t.id
-           WHERE s.status = 'ready'
-           ORDER BY t.activity_id, t.seq, s.seq
+      // Fall back to any ready task if no repo-specific matches
+      if (!task && req.query.repo) {
+        task = db.prepare(
+          `SELECT t.* FROM tasks t
+           WHERE t.status = 'ready'
+           ORDER BY t.goal_id, t.seq
            LIMIT 1`,
         ).get() as any;
       }
 
-      if (story) return { ok: true, data: { ...story, entityType: "story" } };
+      if (task) return { ok: true, data: { ...task, entityType: "task" } };
 
       return { ok: true, data: null };
     });
@@ -39,7 +37,7 @@ export function registerWorkflowRoutes(app: FastifyInstance, ctx: ServerContext)
 
   app.get<{ Params: { entityType: string; entityId: string } }>("/api/log/:entityType/:entityId", (req) => {
     return ctx.withDb((db) => {
-      const entries = findLogEntries(db, "story", Number(req.params.entityId));
+      const entries = findLogEntries(db, "task", Number(req.params.entityId));
       return { ok: true, data: entries };
     });
   });
@@ -51,9 +49,9 @@ export function registerWorkflowRoutes(app: FastifyInstance, ctx: ServerContext)
     });
   });
 
-  app.post<{ Body: { entityType: "story"; entityId: number; message: string; agent?: string } }>("/api/log", (req) => {
+  app.post<{ Body: { entityType: "task"; entityId: number; message: string; agent?: string } }>("/api/log", (req) => {
     return ctx.withDb((db) => {
-      const entry = insertLogEntry(db, "story", req.body.entityId, req.body.message, req.body.agent);
+      const entry = insertLogEntry(db, "task", req.body.entityId, req.body.message, req.body.agent);
       emit("log.created", entry);
       return { ok: true, data: entry };
     });

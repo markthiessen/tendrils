@@ -1,7 +1,7 @@
-import type { StoryStatus } from "./types.js";
+import type { TaskStatus } from "./types.js";
 import { InvalidArgumentError } from "../errors.js";
 
-const STORY_TRANSITIONS: Record<StoryStatus, StoryStatus[]> = {
+const TASK_TRANSITIONS: Record<TaskStatus, TaskStatus[]> = {
   backlog: ["ready", "cancelled"],
   ready: ["claimed", "backlog", "cancelled"],
   claimed: ["in-progress", "ready", "cancelled"],
@@ -12,22 +12,22 @@ const STORY_TRANSITIONS: Record<StoryStatus, StoryStatus[]> = {
   cancelled: ["backlog", "ready"],
 };
 
-export const ALL_STORY_STATUSES: StoryStatus[] = Object.keys(
-  STORY_TRANSITIONS,
-) as StoryStatus[];
+export const ALL_TASK_STATUSES: TaskStatus[] = Object.keys(
+  TASK_TRANSITIONS,
+) as TaskStatus[];
 
-export function validateStoryTransition(
-  from: StoryStatus,
-  to: StoryStatus,
+export function validateTaskTransition(
+  from: TaskStatus,
+  to: TaskStatus,
 ): void {
-  const allowed = STORY_TRANSITIONS[from];
+  const allowed = TASK_TRANSITIONS[from];
   if (!allowed || !allowed.includes(to)) {
     throw new InvalidArgumentError(
-      `Invalid story status transition: '${from}' -> '${to}'. Allowed: ${allowed?.join(", ") ?? "none"}`,
+      `Invalid task status transition: '${from}' -> '${to}'. Allowed: ${allowed?.join(", ") ?? "none"}`,
     );
   }
 }
 
-export function isValidStoryStatus(s: string): s is StoryStatus {
-  return ALL_STORY_STATUSES.includes(s as StoryStatus);
+export function isValidTaskStatus(s: string): s is TaskStatus {
+  return ALL_TASK_STATUSES.includes(s as TaskStatus);
 }

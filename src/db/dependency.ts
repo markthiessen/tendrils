@@ -1,104 +1,102 @@
 import type { Database } from "./compat.js";
-import type { StoryDependency } from "../model/types.js";
+import type { TaskDependency } from "../model/types.js";
 
 export function addDependency(
   db: Database,
-  storyId: number,
+  taskId: number,
   dependsOnId: number,
-): StoryDependency {
+): TaskDependency {
   const result = db
     .prepare(
-      "INSERT INTO story_dependencies (story_id, depends_on_id) VALUES (?, ?)",
+      "INSERT INTO task_dependencies (task_id, depends_on_id) VALUES (?, ?)",
     )
-    .run(storyId, dependsOnId);
+    .run(taskId, dependsOnId);
 
   return db
-    .prepare("SELECT * FROM story_dependencies WHERE id = ?")
-    .get(result.lastInsertRowid) as StoryDependency;
+    .prepare("SELECT * FROM task_dependencies WHERE id = ?")
+    .get(result.lastInsertRowid) as TaskDependency;
 }
 
 export function removeDependency(
   db: Database,
-  storyId: number,
+  taskId: number,
   dependsOnId: number,
 ): boolean {
   const result = db
     .prepare(
-      "DELETE FROM story_dependencies WHERE story_id = ? AND depends_on_id = ?",
+      "DELETE FROM task_dependencies WHERE task_id = ? AND depends_on_id = ?",
     )
-    .run(storyId, dependsOnId);
+    .run(taskId, dependsOnId);
   return result.changes > 0;
 }
 
 export function findDependencies(
   db: Database,
-  storyId: number,
-): StoryDependency[] {
+  taskId: number,
+): TaskDependency[] {
   return db
     .prepare(
-      "SELECT * FROM story_dependencies WHERE story_id = ? ORDER BY depends_on_id",
+      "SELECT * FROM task_dependencies WHERE task_id = ? ORDER BY depends_on_id",
     )
-    .all(storyId) as StoryDependency[];
+    .all(taskId) as TaskDependency[];
 }
 
 export function findDependents(
   db: Database,
-  storyId: number,
-): StoryDependency[] {
+  taskId: number,
+): TaskDependency[] {
   return db
     .prepare(
-      "SELECT * FROM story_dependencies WHERE depends_on_id = ? ORDER BY story_id",
+      "SELECT * FROM task_dependencies WHERE depends_on_id = ? ORDER BY task_id",
     )
-    .all(storyId) as StoryDependency[];
+    .all(taskId) as TaskDependency[];
 }
 
 export function hasUnsatisfiedDependencies(
   db: Database,
-  storyId: number,
+  taskId: number,
 ): boolean {
   const row = db
     .prepare(
-      `SELECT COUNT(*) as count FROM story_dependencies sd
-       JOIN stories s ON s.id = sd.depends_on_id
-       WHERE sd.story_id = ? AND s.status != 'done'`,
+      `SELECT COUNT(*) as count FROM task_dependencies td
+       JOIN tasks t ON t.id = td.depends_on_id
+       WHERE td.task_id = ? AND t.status != 'done'`,
     )
-    .get(storyId) as { count: number };
+    .get(taskId) as { count: number };
   return row.count > 0;
 }
 
 export function getUnsatisfiedDependencies(
   db: Database,
-  storyId: number,
+  taskId: number,
 ): number[] {
   const rows = db
     .prepare(
-      `SELECT sd.depends_on_id FROM story_dependencies sd
-       JOIN stories s ON s.id = sd.depends_on_id
-       WHERE sd.story_id = ? AND s.status != 'done'`,
+      `SELECT td.depends_on_id FROM task_dependencies td
+       JOIN tasks t ON t.id = td.depends_on_id
+       WHERE td.task_id = ? AND t.status != 'done'`,
     )
-    .all(storyId) as { depends_on_id: number }[];
+    .all(taskId) as { depends_on_id: number }[];
   return rows.map((r) => r.depends_on_id);
 }
 
 export function wouldCreateCycle(
   db: Database,
-  storyId: number,
+  taskId: number,
   dependsOnId: number,
 ): boolean {
-  // Check if dependsOnId already transitively depends on storyId
-  // If so, adding storyId -> dependsOnId would create a cycle
   const visited = new Set<number>();
   const stack = [dependsOnId];
 
   while (stack.length > 0) {
     const current = stack.pop()!;
-    if (current === storyId) return true;
+    if (current === taskId) return true;
     if (visited.has(current)) continue;
     visited.add(current);
 
     const deps = db
       .prepare(
-        "SELECT depends_on_id FROM story_dependencies WHERE story_id = ?",
+        "SELECT depends_on_id FROM task_dependencies WHERE task_id = ?",
       )
       .all(current) as { depends_on_id: number }[];
 
@@ -110,15 +108,15 @@ export function wouldCreateCycle(
   return false;
 }
 
-export function storiesWithUnsatisfiedDeps(
+export function tasksWithUnsatisfiedDeps(
   db: Database,
 ): number[] {
   const rows = db
     .prepare(
-      `SELECT DISTINCT sd.story_id FROM story_dependencies sd
-       JOIN stories s ON s.id = sd.depends_on_id
-       WHERE s.status != 'done'`,
+      `SELECT DISTINCT td.task_id FROM task_dependencies td
+       JOIN tasks t ON t.id = td.depends_on_id
+       WHERE t.status != 'done'`,
     )
-    .all() as { story_id: number }[];
-  return rows.map((r) => r.story_id);
+    .all() as { task_id: number }[];
+  return rows.map((r) => r.task_id);
 }

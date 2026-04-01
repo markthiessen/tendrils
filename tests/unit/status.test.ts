@@ -1,48 +1,48 @@
 import { describe, it, expect } from "vitest";
 import {
-  validateStoryTransition,
-  isValidStoryStatus,
+  validateTaskTransition,
+  isValidTaskStatus,
 } from "../../src/model/status.js";
 
-describe("validateStoryTransition", () => {
+describe("validateTaskTransition", () => {
   it("allows valid transitions", () => {
-    expect(() => validateStoryTransition("backlog", "ready")).not.toThrow();
-    expect(() => validateStoryTransition("ready", "claimed")).not.toThrow();
-    expect(() => validateStoryTransition("claimed", "in-progress")).not.toThrow();
-    expect(() => validateStoryTransition("in-progress", "done")).not.toThrow();
-    expect(() => validateStoryTransition("in-progress", "blocked")).not.toThrow();
-    expect(() => validateStoryTransition("blocked", "in-progress")).not.toThrow();
-    expect(() => validateStoryTransition("in-progress", "review")).not.toThrow();
-    expect(() => validateStoryTransition("review", "done")).not.toThrow();
-    expect(() => validateStoryTransition("done", "ready")).not.toThrow();
+    expect(() => validateTaskTransition("backlog", "ready")).not.toThrow();
+    expect(() => validateTaskTransition("ready", "claimed")).not.toThrow();
+    expect(() => validateTaskTransition("claimed", "in-progress")).not.toThrow();
+    expect(() => validateTaskTransition("in-progress", "done")).not.toThrow();
+    expect(() => validateTaskTransition("in-progress", "blocked")).not.toThrow();
+    expect(() => validateTaskTransition("blocked", "in-progress")).not.toThrow();
+    expect(() => validateTaskTransition("in-progress", "review")).not.toThrow();
+    expect(() => validateTaskTransition("review", "done")).not.toThrow();
+    expect(() => validateTaskTransition("done", "ready")).not.toThrow();
   });
 
   it("allows cancel from any active state", () => {
-    expect(() => validateStoryTransition("backlog", "cancelled")).not.toThrow();
-    expect(() => validateStoryTransition("ready", "cancelled")).not.toThrow();
-    expect(() => validateStoryTransition("claimed", "cancelled")).not.toThrow();
-    expect(() => validateStoryTransition("in-progress", "cancelled")).not.toThrow();
-    expect(() => validateStoryTransition("blocked", "cancelled")).not.toThrow();
-    expect(() => validateStoryTransition("review", "cancelled")).not.toThrow();
+    expect(() => validateTaskTransition("backlog", "cancelled")).not.toThrow();
+    expect(() => validateTaskTransition("ready", "cancelled")).not.toThrow();
+    expect(() => validateTaskTransition("claimed", "cancelled")).not.toThrow();
+    expect(() => validateTaskTransition("in-progress", "cancelled")).not.toThrow();
+    expect(() => validateTaskTransition("blocked", "cancelled")).not.toThrow();
+    expect(() => validateTaskTransition("review", "cancelled")).not.toThrow();
   });
 
   it("rejects invalid transitions", () => {
-    expect(() => validateStoryTransition("backlog", "done")).toThrow("Invalid story status transition");
-    expect(() => validateStoryTransition("ready", "done")).toThrow("Invalid story status transition");
-    expect(() => validateStoryTransition("done", "in-progress")).toThrow("Invalid story status transition");
-    expect(() => validateStoryTransition("backlog", "in-progress")).toThrow("Invalid story status transition");
+    expect(() => validateTaskTransition("backlog", "done")).toThrow("Invalid task status transition");
+    expect(() => validateTaskTransition("ready", "done")).toThrow("Invalid task status transition");
+    expect(() => validateTaskTransition("done", "in-progress")).toThrow("Invalid task status transition");
+    expect(() => validateTaskTransition("backlog", "in-progress")).toThrow("Invalid task status transition");
   });
 });
 
-describe("isValidStoryStatus", () => {
+describe("isValidTaskStatus", () => {
   it("returns true for valid statuses", () => {
-    expect(isValidStoryStatus("backlog")).toBe(true);
-    expect(isValidStoryStatus("in-progress")).toBe(true);
-    expect(isValidStoryStatus("done")).toBe(true);
+    expect(isValidTaskStatus("backlog")).toBe(true);
+    expect(isValidTaskStatus("in-progress")).toBe(true);
+    expect(isValidTaskStatus("done")).toBe(true);
   });
 
   it("returns false for invalid statuses", () => {
-    expect(isValidStoryStatus("invalid")).toBe(false);
-    expect(isValidStoryStatus("")).toBe(false);
+    expect(isValidTaskStatus("invalid")).toBe(false);
+    expect(isValidTaskStatus("")).toBe(false);
   });
 });

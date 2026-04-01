@@ -36,86 +36,62 @@ afterEach(() => {
   fs.rmSync(testCwd, { recursive: true, force: true });
 });
 
-describe("activity CRUD", () => {
+describe("goal CRUD", () => {
   it("add, list, show, edit, rm", () => {
-    const added = tdJson(["activity", "add", "User Auth"]);
+    const added = tdJson(["goal", "add", "User Auth"]);
     expect(added.ok).toBe(true);
-    expect(added.data.shortId).toBe("A01");
+    expect(added.data.shortId).toBe("G01");
     expect(added.data.title).toBe("User Auth");
 
-    tdJson(["activity", "add", "Payments"]);
+    tdJson(["goal", "add", "Payments"]);
 
-    const list = tdJson(["activity", "list"]);
+    const list = tdJson(["goal", "list"]);
     expect(list.data).toHaveLength(2);
 
-    const show = tdJson(["activity", "show", "A01"]);
+    const show = tdJson(["goal", "show", "G01"]);
     expect(show.data.title).toBe("User Auth");
 
-    const edited = tdJson(["activity", "edit", "A01", "--title", "Authentication"]);
+    const edited = tdJson(["goal", "edit", "G01", "--title", "Authentication"]);
     expect(edited.data.title).toBe("Authentication");
 
-    const removed = tdJson(["activity", "rm", "A01", "--confirm"]);
+    const removed = tdJson(["goal", "rm", "G01", "--confirm"]);
     expect(removed.data.deleted).toBe(true);
 
-    const after = tdJson(["activity", "list"]);
+    const after = tdJson(["goal", "list"]);
     expect(after.data).toHaveLength(1);
   });
 });
 
 describe("task CRUD", () => {
-  it("add, list, show, edit, rm", () => {
-    tdJson(["activity", "add", "Auth"]);
+  it("add, list, show, edit, move, rm", () => {
+    tdJson(["goal", "add", "Auth"]);
+    tdJson(["goal", "add", "Payments"]);
 
-    const added = tdJson(["task", "add", "A01", "Login"]);
+    const added = tdJson(["task", "add", "G01", "Email login"]);
     expect(added.ok).toBe(true);
-    expect(added.data.title).toBe("Login");
+    expect(added.data.shortId).toBe("G01.T001");
 
-    tdJson(["task", "add", "A01", "Registration"]);
+    tdJson(["task", "add", "G01", "OAuth2"]);
 
     const list = tdJson(["task", "list"]);
     expect(list.data).toHaveLength(2);
 
-    const filtered = tdJson(["task", "list", "A01"]);
+    const filtered = tdJson(["task", "list", "G01"]);
     expect(filtered.data).toHaveLength(2);
 
-    const edited = tdJson(["task", "edit", "A01.T01", "--title", "Login Flow"]);
-    expect(edited.data.title).toBe("Login Flow");
+    const show = tdJson(["task", "show", "G01.T001"]);
+    expect(show.data.title).toBe("Email login");
+    expect(show.data.status).toBe("backlog");
 
-    tdJson(["task", "rm", "A01.T01", "--confirm"]);
+    const edited = tdJson(["task", "edit", "G01.T001", "--title", "Email/password login"]);
+    expect(edited.data.title).toBe("Email/password login");
+
+    // Move task to different goal
+    const moved = tdJson(["task", "move", "G01.T001", "G02"]);
+    expect(moved.data.goal_id).toBe(2);
+
+    tdJson(["task", "rm", "G01.T001", "--confirm"]);
     const after = tdJson(["task", "list"]);
     expect(after.data).toHaveLength(1);
   });
 });
-
-describe("story CRUD", () => {
-  it("add, list, show, edit, move, rm", () => {
-    tdJson(["activity", "add", "Auth"]);
-    tdJson(["task", "add", "A01", "Login"]);
-    tdJson(["task", "add", "A01", "Signup"]);
-
-    const added = tdJson(["story", "add", "A01.T01", "Email login"]);
-    expect(added.ok).toBe(true);
-    expect(added.data.shortId).toBe("A01.T01.S001");
-
-    tdJson(["story", "add", "A01.T01", "OAuth2"]);
-
-    const list = tdJson(["story", "list"]);
-    expect(list.data).toHaveLength(2);
-
-    const show = tdJson(["story", "show", "A01.T01.S001"]);
-    expect(show.data.title).toBe("Email login");
-    expect(show.data.status).toBe("backlog");
-
-    const edited = tdJson(["story", "edit", "A01.T01.S001", "--title", "Email/password login"]);
-    expect(edited.data.title).toBe("Email/password login");
-
-    // Move story to different task
-    const moved = tdJson(["story", "move", "A01.T01.S001", "A01.T02"]);
-    expect(moved.data.task_id).toBe(2);
-
-    tdJson(["story", "rm", "A01.T01.S001", "--confirm"]);
-    const after = tdJson(["story", "list"]);
-    expect(after.data).toHaveLength(1);
-  });
-});
-
