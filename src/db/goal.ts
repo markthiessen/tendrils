@@ -22,8 +22,25 @@ export function insertGoal(
 
 export function findAllGoals(db: Database): Goal[] {
   return db
-    .prepare("SELECT * FROM goals ORDER BY seq")
+    .prepare("SELECT * FROM goals WHERE archived_at IS NULL ORDER BY seq")
     .all() as Goal[];
+}
+
+export function findArchivedGoals(db: Database): Goal[] {
+  return db
+    .prepare("SELECT * FROM goals WHERE archived_at IS NOT NULL ORDER BY archived_at DESC")
+    .all() as Goal[];
+}
+
+export function archiveGoal(
+  db: Database,
+  id: number,
+  summary: string,
+): Goal | undefined {
+  db.prepare(
+    "UPDATE goals SET archived_at = datetime('now'), summary = ?, updated_at = datetime('now') WHERE id = ? AND archived_at IS NULL",
+  ).run(summary, id);
+  return db.prepare("SELECT * FROM goals WHERE id = ?").get(id) as Goal | undefined;
 }
 
 export function findGoalById(

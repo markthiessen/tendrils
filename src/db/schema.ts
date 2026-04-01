@@ -331,6 +331,14 @@ INSERT OR IGNORE INTO schema_version (version) VALUES (9);
 COMMIT;
 `;
 
+export const SCHEMA_V10 = `
+BEGIN;
+ALTER TABLE goals ADD COLUMN archived_at TEXT;
+ALTER TABLE goals ADD COLUMN summary TEXT NOT NULL DEFAULT '';
+INSERT OR IGNORE INTO schema_version (version) VALUES (10);
+COMMIT;
+`;
+
 // Per-repo decisions database schema (lives at ~/.tendrils/repos/<hash>/decisions.db)
 export const DECISIONS_SCHEMA_V1 = `
 PRAGMA foreign_keys = ON;
