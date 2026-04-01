@@ -11,37 +11,45 @@ import type { ServerContext } from "../context.js";
 
 export function registerArchitectureRoutes(app: FastifyInstance, ctx: ServerContext) {
   app.get("/api/architecture", () => {
-    const arch = getArchitecture(ctx.db);
-    const notes = findAllArchitectureNotes(ctx.db);
-    return { ok: true, data: { ...arch, notes } };
+    return ctx.withDb((db) => {
+      const arch = getArchitecture(db);
+      const notes = findAllArchitectureNotes(db);
+      return { ok: true, data: { ...arch, notes } };
+    });
   });
 
   app.put<{ Body: { mermaid_source: string } }>("/api/architecture", (req) => {
-    const arch = updateArchitecture(ctx.db, req.body.mermaid_source);
-    emit("architecture.updated", arch);
-    return { ok: true, data: arch };
+    return ctx.withDb((db) => {
+      const arch = updateArchitecture(db, req.body.mermaid_source);
+      emit("architecture.updated", arch);
+      return { ok: true, data: arch };
+    });
   });
 
   app.put<{
     Params: { nodeId: string };
     Body: { note_type: "node" | "edge"; content: string };
   }>("/api/architecture/notes/:nodeId", (req) => {
-    const note = upsertArchitectureNote(
-      ctx.db,
-      req.params.nodeId,
-      req.body.note_type,
-      req.body.content,
-    );
-    emit("architecture.note.updated", note);
-    return { ok: true, data: note };
+    return ctx.withDb((db) => {
+      const note = upsertArchitectureNote(
+        db,
+        req.params.nodeId,
+        req.body.note_type,
+        req.body.content,
+      );
+      emit("architecture.note.updated", note);
+      return { ok: true, data: note };
+    });
   });
 
   app.delete<{ Params: { nodeId: string } }>("/api/architecture/notes/:nodeId", (req) => {
-    const deleted = deleteArchitectureNote(ctx.db, req.params.nodeId);
-    if (!deleted) {
-      return { ok: false, error: { code: "NOT_FOUND", message: "Note not found" } };
-    }
-    emit("architecture.note.deleted", { nodeId: req.params.nodeId });
-    return { ok: true, data: { nodeId: req.params.nodeId, deleted: true } };
+    return ctx.withDb((db) => {
+      const deleted = deleteArchitectureNote(db, req.params.nodeId);
+      if (!deleted) {
+        return { ok: false, error: { code: "NOT_FOUND", message: "Note not found" } };
+      }
+      emit("architecture.note.deleted", { nodeId: req.params.nodeId });
+      return { ok: true, data: { nodeId: req.params.nodeId, deleted: true } };
+    });
   });
 }

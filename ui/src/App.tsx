@@ -14,13 +14,7 @@ export function App() {
         <WorkspaceSwitcher />
         <ViewToggle view={view} onChange={setView} />
       </header>
-      {view === "workspace" ? <WorkspaceView /> : (
-        <div className="app-body">
-          <main className="app-main app-main--full">
-            <SystemView />
-          </main>
-        </div>
-      )}
+      {view === "workspace" ? <WorkspaceView /> : <SystemView />}
     </div>
   );
 }

@@ -8,53 +8,57 @@ import type { ServerContext } from "../context.js";
 
 export function registerMapRoutes(app: FastifyInstance, ctx: ServerContext) {
   app.get("/api/map", () => {
-    const activities = findAllActivities(ctx.db);
-    const tasks = findAllTasks(ctx.db);
-    const stories = findAllStories(ctx.db);
+    return ctx.withDb((db) => {
+      const activities = findAllActivities(db);
+      const tasks = findAllTasks(db);
+      const stories = findAllStories(db);
 
-    const mapData = activities.map((a) => {
-      const actTasks = tasks.filter((t) => t.activity_id === a.id);
+      const mapData = activities.map((a) => {
+        const actTasks = tasks.filter((t) => t.activity_id === a.id);
+        return {
+          ...a,
+          shortId: formatActivityId(a.id),
+          tasks: actTasks.map((t) => {
+            const taskStories = stories.filter((s) => s.task_id === t.id);
+            return {
+              ...t,
+              shortId: formatTaskId(a.id, t.id),
+              stories: taskStories.map((s) => ({
+                ...s,
+                shortId: formatStoryId(a.id, t.id, s.id),
+                items: findStoryItems(db, s.id),
+              })),
+            };
+          }),
+        };
+      });
+
       return {
-        ...a,
-        shortId: formatActivityId(a.id),
-        tasks: actTasks.map((t) => {
-          const taskStories = stories.filter((s) => s.task_id === t.id);
-          return {
-            ...t,
-            shortId: formatTaskId(a.id, t.id),
-            stories: taskStories.map((s) => ({
-              ...s,
-              shortId: formatStoryId(a.id, t.id, s.id),
-              items: findStoryItems(ctx.db, s.id),
-            })),
-          };
-        }),
+        ok: true,
+        data: {
+          activities: mapData,
+        },
       };
     });
-
-    return {
-      ok: true,
-      data: {
-        activities: mapData,
-      },
-    };
   });
 
   app.get("/api/stats", () => {
-    const activities = findAllActivities(ctx.db);
-    const tasks = findAllTasks(ctx.db);
-    const stories = findAllStories(ctx.db);
+    return ctx.withDb((db) => {
+      const activities = findAllActivities(db);
+      const tasks = findAllTasks(db);
+      const stories = findAllStories(db);
 
-    const storyCounts: Record<string, number> = {};
-    for (const s of stories) storyCounts[s.status] = (storyCounts[s.status] ?? 0) + 1;
+      const storyCounts: Record<string, number> = {};
+      for (const s of stories) storyCounts[s.status] = (storyCounts[s.status] ?? 0) + 1;
 
-    return {
-      ok: true,
-      data: {
-        activities: activities.length,
-        tasks: tasks.length,
-        stories: { total: stories.length, ...storyCounts },
-      },
-    };
+      return {
+        ok: true,
+        data: {
+          activities: activities.length,
+          tasks: tasks.length,
+          stories: { total: stories.length, ...storyCounts },
+        },
+      };
+    });
   });
 }

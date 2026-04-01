@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useRepos, type RepoInfo } from "../hooks/useRepos";
+import { useRepos } from "../hooks/useRepos";
 import { useRepoDecisions } from "../hooks/useRepoDecisions";
 
 function DecisionList({ repoPath }: { repoPath: string }) {
@@ -33,32 +33,33 @@ function DecisionList({ repoPath }: { repoPath: string }) {
 
 export function SystemDecisions() {
   const { repos } = useRepos();
-  const [selectedRepo, setSelectedRepo] = useState<RepoInfo | null>(null);
+  const [selectedPath, setSelectedPath] = useState<string | null>(null);
 
-  const active = selectedRepo ?? repos[0] ?? null;
+  const activePath = selectedPath ?? repos[0]?.path ?? null;
 
   return (
     <div className="system-decisions-section">
-      <h3>Decisions</h3>
+      <div className="system-decisions-header">
+        <h3>Decisions</h3>
+        {repos.length > 1 && (
+          <select
+            className="repo-switcher"
+            value={activePath ?? ""}
+            onChange={(e) => setSelectedPath(e.target.value)}
+          >
+            {repos.map((r) => (
+              <option key={r.id} value={r.path}>
+                {r.name}{r.role ? ` (${r.role})` : ""}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
       {repos.length === 0 ? (
         <div className="system-decisions-empty">No repos in this workspace.</div>
-      ) : (
-        <>
-          <div className="repo-tabs">
-            {repos.map((r) => (
-              <button
-                key={r.id}
-                className={`repo-tab${active?.id === r.id ? " repo-tab--active" : ""}`}
-                onClick={() => setSelectedRepo(r)}
-              >
-                {r.name}
-                {r.role && <span className="repo-tab-role">{r.role}</span>}
-              </button>
-            ))}
-          </div>
-          {active && <DecisionList repoPath={active.path} />}
-        </>
-      )}
+      ) : activePath ? (
+        <DecisionList repoPath={activePath} />
+      ) : null}
     </div>
   );
 }

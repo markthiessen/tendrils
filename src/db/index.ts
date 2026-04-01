@@ -33,6 +33,26 @@ export function getDecisionsDb(repoRoot: string): Database {
   return db;
 }
 
+/** Open a workspace DB without caching — caller must close it. */
+export function openWorkspaceDb(workspace: string): Database {
+  const dbPath = getWorkspaceDbPath(workspace);
+  const db = openDatabase(dbPath);
+  applyPendingMigrations(db);
+  return db;
+}
+
+/** Open a decisions DB without caching — caller must close it. */
+export function openDecisionsDb(repoRoot: string): Database {
+  const dbPath = getRepoDecisionsDbPath(repoRoot);
+  fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+  const db = openDatabase(dbPath);
+  const version = getSchemaVersion(db);
+  if (version < 1) {
+    db.exec(DECISIONS_SCHEMA_V1);
+  }
+  return db;
+}
+
 export function closeDb(): void {
   for (const db of _dbs.values()) {
     db.close();
