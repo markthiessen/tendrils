@@ -1,10 +1,16 @@
-import type { MapData } from "../hooks/useStoryMap";
+import type { MapData, TaskTransitions } from "../hooks/useStoryMap";
 import { TaskCard } from "./TaskCard";
 import { EditableText } from "./EditableText";
 import { AddForm } from "./AddForm";
+import { ProgressRing } from "./ProgressRing";
 import { post, put, del } from "../api/client";
 
-export function StoryMap({ data }: { data: MapData }) {
+interface Props {
+  data: MapData;
+  transitions: TaskTransitions;
+}
+
+export function StoryMap({ data, transitions }: Props) {
   const handleAddGoal = async (title: string) => {
     await post("/api/goals", { title });
   };
@@ -47,6 +53,10 @@ td task status G01.T001 ready`}
         {/* Goal header row */}
         {data.goals.map((g) => (
           <div key={g.id} className="activity-header">
+            <ProgressRing
+              done={g.tasks.filter((t) => t.status === "done").length}
+              total={g.tasks.length}
+            />
             <span className="activity-id">{g.shortId}</span>
             <EditableText
               value={g.title}
@@ -70,7 +80,13 @@ td task status G01.T001 ready`}
         {data.goals.map((goal) => (
           <div key={`cell-${goal.id}`} className="map-cell">
             {goal.tasks.map((task) => (
-              <TaskCard key={task.id} task={task} />
+              <TaskCard
+                key={task.id}
+                task={task}
+                isNew={transitions.newTaskIds.has(task.id)}
+                statusChanged={transitions.statusChangedIds.has(task.id)}
+                justDone={transitions.justDoneIds.has(task.id)}
+              />
             ))}
             <AddForm
               placeholder="Task"

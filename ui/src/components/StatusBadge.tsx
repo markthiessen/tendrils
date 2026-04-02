@@ -33,6 +33,7 @@ export function StatusBadge({ status }: { status: string }) {
         fontWeight: 600,
         color: "#fff",
         backgroundColor: color,
+        transition: "background-color 0.4s ease",
       }}
     >
       {status}
