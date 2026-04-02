@@ -10,7 +10,7 @@ You are filling in the local details for tasks that were planned from another re
 
 ## Tasks for this repo
 
-!`td task list --repo $(cat .tendrils/config.toml 2>/dev/null | grep '^repo' | cut -d'"' -f2) --status backlog --json 2>/dev/null || echo "null"`
+!`td task list --status backlog --json 2>/dev/null || echo "null"`
 
 ## Key decisions
 
@@ -46,8 +46,9 @@ For each task that needs it, explore the codebase to find:
 
 Keep it brief — one or two lines appended to the existing description. Do not rewrite what's already there.
 
+First run `td task show <id>` to get the current description verbatim, then pass the full text with your addition:
 ```bash
-td task edit <id> --desc "<existing description>
+td task edit <id> --desc "<existing description verbatim>
 Entry: src/path/to/file.ts."
 ```
 

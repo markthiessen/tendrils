@@ -47,7 +47,7 @@ If a next item was found:
 
 ### Step 3: Claim the work
 
-In **normal mode**: ask the user to confirm before claiming, unless the task is clearly straightforward.
+In **normal mode**: ask the user to confirm before claiming.
 
 In **auto mode**: claim immediately without asking.
 
@@ -61,7 +61,7 @@ td log <id> "Starting work" --agent claude
 
 Read the task description carefully — it should include:
 - Acceptance criteria ("Done when: ...")
-- Entry point file paths to look at first
+- Entry point file paths to look at first (if missing, run `/td-refine` first)
 - Relevant decision IDs to follow
 - Stack/convention notes
 
@@ -83,7 +83,7 @@ Then run `/td-finalize` to record decisions and confirm map state.
 td log <id> "Done — <brief summary of what was built>" --agent claude
 td task status <id> done --agent claude
 ```
-Then immediately run `td next --json` again. If another ready task is returned, go back to Step 3 and repeat. If the output is `null` or empty, stop and report how many tasks were completed. If a task hits a blocker during work, set it to blocked with a reason and stop the loop.
+Then run `td next --json` as a live command (not the pre-loaded output above). If another ready task is returned, go back to Step 3 and repeat. If the result is `null` or `data` is empty, stop and report how many tasks were completed. If a task hits a blocker during work, set it to blocked with a reason and stop the loop.
 
 ## Guidelines
 
