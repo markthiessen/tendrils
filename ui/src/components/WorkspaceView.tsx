@@ -5,7 +5,7 @@ import { ActivityFeed } from "./ActivityFeed";
 import { StatsBar } from "./StatsBar";
 
 export function WorkspaceView() {
-  const { data, loading } = useStoryMap();
+  const { data, loading, transitions } = useStoryMap();
   const { entries } = useActivityFeed();
 
   if (loading) {
@@ -21,7 +21,7 @@ export function WorkspaceView() {
       <StatsBar data={data} />
       <div className="app-body">
         <main className="app-main">
-          <StoryMap data={data} />
+          <StoryMap data={data} transitions={transitions} />
         </main>
         <aside className="app-sidebar">
           <ActivityFeed entries={entries} />

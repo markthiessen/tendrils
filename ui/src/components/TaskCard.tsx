@@ -5,9 +5,12 @@ import { put, del, post } from "../api/client";
 
 interface Props {
   task: TaskData;
+  isNew?: boolean;
+  statusChanged?: boolean;
+  justDone?: boolean;
 }
 
-export function TaskCard({ task }: Props) {
+export function TaskCard({ task, isNew, statusChanged, justDone }: Props) {
   const handleTitleChange = async (title: string) => {
     await put(`/api/tasks/${task.id}`, { title });
   };
@@ -24,9 +27,17 @@ export function TaskCard({ task }: Props) {
     await del(`/api/tasks/${task.id}`);
   };
 
+  const classes = [
+    "task-card",
+    `task-card--${task.status}`,
+    isNew && "task-card--entering",
+    statusChanged && !justDone && "task-card--status-changed",
+    justDone && "task-card--celebrate",
+  ].filter(Boolean).join(" ");
+
   return (
     <div
-      className={`task-card task-card--${task.status}`}
+      className={classes}
       draggable
       onDragStart={(e) => {
         e.dataTransfer.setData("taskId", String(task.id));
@@ -36,6 +47,7 @@ export function TaskCard({ task }: Props) {
         e.currentTarget.classList.remove("task-card--dragging");
       }}
     >
+      {justDone && <span className="task-card-checkmark">&#10003;</span>}
       <div className="task-card-header">
         <span className="task-id">{task.shortId}</span>
         <StatusBadge status={task.status} />
@@ -52,7 +64,12 @@ export function TaskCard({ task }: Props) {
         placeholder="Add description..."
       />
       {task.claimed_by && (
-        <div className="task-claimed">@{task.claimed_by}</div>
+        <div className="task-claimed">
+          {(task.status === "claimed" || task.status === "in-progress") && (
+            <span className="agent-dot" />
+          )}
+          @{task.claimed_by}
+        </div>
       )}
       {(task.estimate || task.repo) && (
         <div className="task-meta">
