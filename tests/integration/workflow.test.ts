@@ -108,7 +108,7 @@ describe("td task status", () => {
   it("transitions through full lifecycle", () => {
     td(["task", "claim", "G01.T001", "--agent", "c1"]);
     td(["task", "status", "G01.T001", "in-progress"]);
-    td(["task", "status", "G01.T001", "review"]);
+    td(["task", "status", "G01.T001", "review", "--proof", "Verified: tests pass"]);
     const result = tdJson(["task", "status", "G01.T001", "done"]);
     expect(result.data.status).toBe("done");
   });

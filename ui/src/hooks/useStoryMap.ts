@@ -16,6 +16,7 @@ export interface TaskData {
   claimed_by: string | null;
   estimate: string | null;
   repo: string | null;
+  proof: string | null;
   shortId: string;
 }
 

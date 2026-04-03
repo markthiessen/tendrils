@@ -19,6 +19,7 @@ export interface WorkspaceConfig {
   workspace: {
     name: string;
     created_at: string;
+    max_agents_per_repo?: number;
   };
   bindings: WorkspaceBinding[];
 }

@@ -12,17 +12,15 @@ If args contain `auto`, run in **auto mode**: skip confirmation, complete tasks 
 
 !`cat .tendrils/config.toml 2>/dev/null || echo "No .tendrils/config.toml found — repo role unknown"`
 
-## Next item
+## Next item (with context bundle)
 
-!`td next --json 2>/dev/null || echo "null"`
+!`td next --context --json 2>/dev/null || echo "null"`
+
+The context bundle includes: related decisions, architecture diagram, dependency chain with outputs, and any rejection feedback from prior attempts. Use this instead of looking up decisions separately.
 
 ## Current map
 
 !`td map 2>/dev/null || echo "No map found. Run 'td init' to get started."`
-
-## Key decisions
-
-!`td decisions 2>/dev/null`
 
 ## Instructions
 
@@ -65,8 +63,15 @@ Read the task description carefully — it should include:
 - Relevant decision IDs to follow
 - Stack/convention notes
 
+Use the **context bundle** from the next item above:
+- `context.decisions` — architectural decisions relevant to this repo
+- `context.architecture` — the Mermaid architecture diagram
+- `context.dependencies` — upstream tasks with their outputs (what was built)
+- `context.feedback` — any rejection comments from prior review attempts (address these first!)
+
 Implement only what this task scopes. As you work:
-- Follow any relevant architectural decisions from the decisions list above
+- Follow relevant architectural decisions from the context bundle
+- If there is rejection feedback, address those issues first
 - Log progress: `td log <id> "Completed X" --agent claude`
 
 ### Step 5: Wrap up

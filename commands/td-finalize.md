@@ -49,13 +49,20 @@ For each in-progress task, verify the work is actually done:
   - Complete it now
   - Leave the task in progress and finalize only the completed tasks
 
-### Step 4: Mark tasks done
+### Step 4: Provide proof and mark for review
 
-For each completed task:
+For each completed task, write a **proof** — a concise summary of:
+- What was changed (files, endpoints, components)
+- How it was verified (tests pass, manual testing, build succeeds)
+- How the "Done when" criteria from the task description are satisfied
+
+Then submit for review with the proof:
 ```bash
-td task status <id> done --agent claude
-td log <id> "Finalized — work complete" --agent claude
+td task status <id> review --agent claude --proof "What was done, what was tested, how Done-when criteria are met"
+td log <id> "Finalized — submitted for review with proof" --agent claude
 ```
+
+The `--proof` flag is **required** for review transitions. Without it, the command will fail. The proof is what the reviewer reads to decide whether to accept or reject the task.
 
 ### Step 5: Record new decisions
 

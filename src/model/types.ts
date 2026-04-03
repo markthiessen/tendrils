@@ -33,6 +33,9 @@ export interface Task {
   blocked_reason: string | null;
   estimate: string | null;
   repo: string | null;
+  output: string | null;
+  proof: string | null;
+  version: number;
   created_at: string;
   updated_at: string;
 }
@@ -59,6 +62,30 @@ export interface TaskDependency {
   id: number;
   task_id: number;
   depends_on_id: number;
+  created_at: string;
+}
+
+export type AgentSessionStatus = "active" | "idle" | "disconnected";
+
+export interface AgentSession {
+  id: number;
+  agent_name: string;
+  task_id: number | null;
+  repo: string | null;
+  status: AgentSessionStatus;
+  started_at: string;
+  last_heartbeat: string;
+  ended_at: string | null;
+}
+
+export type CommentType = "comment" | "approval" | "rejection";
+
+export interface TaskComment {
+  id: number;
+  task_id: number;
+  agent: string | null;
+  message: string;
+  type: CommentType;
   created_at: string;
 }
 

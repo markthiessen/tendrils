@@ -1,6 +1,6 @@
 import type { MapData } from "../hooks/useStoryMap";
 
-export function StatsBar({ data }: { data: MapData }) {
+export function StatsBar({ data, onArchivedClick, onReviewClick }: { data: MapData; onArchivedClick?: () => void; onReviewClick?: () => void }) {
   const allTasks = data.goals.flatMap((g) => g.tasks);
 
   const counts: Record<string, number> = {};
@@ -20,9 +20,9 @@ export function StatsBar({ data }: { data: MapData }) {
         {data.goals.length} goals
       </span>
       {data.archivedCount > 0 && (
-        <span className="stat stat-archived" title="Archived goals are hidden from the kanban">
+        <button className="stat stat-archived" title="View archived goals" onClick={onArchivedClick}>
           {data.archivedCount} archived
-        </span>
+        </button>
       )}
       <span className="stat-separator" />
       <span className="stat">{allTasks.length} tasks</span>
@@ -31,6 +31,11 @@ export function StatsBar({ data }: { data: MapData }) {
           {status}: {count}
         </span>
       ))}
+      {(counts["review"] ?? 0) > 0 && (
+        <button className="stat stat-review" onClick={onReviewClick}>
+          {counts["review"]} in review
+        </button>
+      )}
       {activeAgents.size > 0 && (
         <span className="stat stat-agents">
           <span className="agent-dot" />

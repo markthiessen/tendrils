@@ -1,5 +1,6 @@
 import type { Command } from "commander";
 import { insertLogEntry, findLogEntries, findRecentLogEntries } from "../db/log.js";
+import { heartbeat } from "../db/agent.js";
 import { parseId, formatTaskId } from "../model/id.js";
 import { findTaskById } from "../db/task.js";
 import { NotFoundError, InvalidArgumentError } from "../errors.js";
@@ -30,6 +31,12 @@ export function registerLogCommands(program: Command): void {
       const task = findTaskById(db, parsed.task!);
       if (!task) throw new NotFoundError("task", idStr);
       const entry = insertLogEntry(db, "task", parsed.task!, message, agent);
+
+      // Heartbeat: update agent session on every log entry
+      if (agent) {
+        heartbeat(db, agent);
+      }
+
       const shortId = formatTaskId(task.goal_id, task.id);
       outputSuccess(ctx, entry, `Logged to ${shortId}: ${message}`);
     });

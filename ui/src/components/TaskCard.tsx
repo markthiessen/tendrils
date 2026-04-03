@@ -1,6 +1,8 @@
+import { useState } from "react";
 import type { TaskData } from "../hooks/useStoryMap";
 import { StatusBadge } from "./StatusBadge";
 import { EditableText } from "./EditableText";
+import { TaskComments } from "./TaskComments";
 import { put, del, post } from "../api/client";
 
 interface Props {
@@ -11,6 +13,7 @@ interface Props {
 }
 
 export function TaskCard({ task, isNew, statusChanged, justDone }: Props) {
+  const [showComments, setShowComments] = useState(false);
   const handleTitleChange = async (title: string) => {
     await put(`/api/tasks/${task.id}`, { title });
   };
@@ -71,6 +74,12 @@ export function TaskCard({ task, isNew, statusChanged, justDone }: Props) {
           @{task.claimed_by}
         </div>
       )}
+      {task.proof && task.status === "review" && (
+        <div className="task-proof">
+          <div className="task-proof-label">Proof</div>
+          <div className="task-proof-text">{task.proof}</div>
+        </div>
+      )}
       {(task.estimate || task.repo) && (
         <div className="task-meta">
           {task.estimate && <span className="task-estimate">{task.estimate}</span>}
@@ -84,10 +93,18 @@ export function TaskCard({ task, isNew, statusChanged, justDone }: Props) {
         {task.status === "done" && (
           <button onClick={() => handleStatusChange("ready")}>Reopen</button>
         )}
+        <button
+          className="btn-comments"
+          onClick={() => setShowComments(!showComments)}
+          title="Comments"
+        >
+          {showComments ? "Hide" : "Comments"}
+        </button>
         <button className="btn-delete" onClick={handleDelete} title="Delete">
           ×
         </button>
       </div>
+      <TaskComments taskId={task.id} visible={showComments} />
     </div>
   );
 }

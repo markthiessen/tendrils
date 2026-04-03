@@ -6,12 +6,15 @@ import { fileURLToPath } from "node:url";
 import { subscribe } from "./sse.js";
 import { createContext } from "./context.js";
 import { emit } from "./sse.js";
+import { markDisconnectedAndRelease } from "../db/agent.js";
+import { insertLogEntry } from "../db/log.js";
 import { registerGoalRoutes } from "./routes/goals.js";
 import { registerTaskRoutes } from "./routes/tasks.js";
 import { registerWorkflowRoutes } from "./routes/workflow.js";
 import { registerMapRoutes } from "./routes/map.js";
 import { registerDecisionRoutes } from "./routes/decisions.js";
 import { registerArchitectureRoutes } from "./routes/architecture.js";
+import { registerAgentRoutes } from "./routes/agents.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -91,8 +94,28 @@ export async function createServer(name: string, port: number) {
   registerMapRoutes(app, ctx);
   registerDecisionRoutes(app, ctx);
   registerArchitectureRoutes(app, ctx);
+  registerAgentRoutes(app, ctx);
 
   await app.listen({ port, host: "0.0.0.0" });
+
+  // Periodic sweep for stale agent sessions (every 60s)
+  const sweepInterval = setInterval(() => {
+    try {
+      ctx.withDb((db) => {
+        const stale = markDisconnectedAndRelease(db);
+        for (const s of stale) {
+          if (s.task_id) {
+            insertLogEntry(db, "task", s.task_id, `Auto-released: agent '${s.agent_name}' disconnected (stale heartbeat)`, undefined, "in-progress", "ready");
+          }
+          emit("agent.disconnected", { agent_name: s.agent_name, task_id: s.task_id });
+        }
+      });
+    } catch {
+      // ignore sweep errors
+    }
+  }, 60_000);
+
+  app.addHook("onClose", () => clearInterval(sweepInterval));
 
   return app;
 }

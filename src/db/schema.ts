@@ -339,6 +339,66 @@ INSERT OR IGNORE INTO schema_version (version) VALUES (10);
 COMMIT;
 `;
 
+export const SCHEMA_V11 = `
+BEGIN;
+CREATE TABLE IF NOT EXISTS agent_sessions (
+  id INTEGER PRIMARY KEY,
+  agent_name TEXT NOT NULL,
+  task_id INTEGER REFERENCES tasks(id) ON DELETE SET NULL,
+  repo TEXT,
+  status TEXT NOT NULL DEFAULT 'active'
+    CHECK(status IN ('active','idle','disconnected')),
+  started_at TEXT NOT NULL DEFAULT (datetime('now')),
+  last_heartbeat TEXT NOT NULL DEFAULT (datetime('now')),
+  ended_at TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_sessions_agent ON agent_sessions(agent_name, status);
+CREATE INDEX IF NOT EXISTS idx_agent_sessions_status ON agent_sessions(status);
+
+INSERT OR IGNORE INTO schema_version (version) VALUES (11);
+COMMIT;
+`;
+
+export const SCHEMA_V12 = `
+BEGIN;
+CREATE TABLE IF NOT EXISTS task_comments (
+  id INTEGER PRIMARY KEY,
+  task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  agent TEXT,
+  message TEXT NOT NULL,
+  type TEXT NOT NULL DEFAULT 'comment'
+    CHECK(type IN ('comment','approval','rejection')),
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_task_comments_task ON task_comments(task_id, created_at);
+
+INSERT OR IGNORE INTO schema_version (version) VALUES (12);
+COMMIT;
+`;
+
+export const SCHEMA_V13 = `
+BEGIN;
+ALTER TABLE tasks ADD COLUMN output TEXT;
+INSERT OR IGNORE INTO schema_version (version) VALUES (13);
+COMMIT;
+`;
+
+export const SCHEMA_V14 = `
+BEGIN;
+ALTER TABLE tasks ADD COLUMN version INTEGER NOT NULL DEFAULT 1;
+INSERT OR IGNORE INTO schema_version (version) VALUES (14);
+COMMIT;
+`;
+
+export const SCHEMA_V15 = `
+BEGIN;
+ALTER TABLE tasks ADD COLUMN proof TEXT;
+INSERT OR IGNORE INTO schema_version (version) VALUES (15);
+COMMIT;
+`;
+
 // Per-repo decisions database schema (lives at ~/.tendrils/repos/<hash>/decisions.db)
 export const DECISIONS_SCHEMA_V1 = `
 PRAGMA foreign_keys = ON;
