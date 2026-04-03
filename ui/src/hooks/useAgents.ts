@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { get, type Envelope } from "../api/client";
 import { useEventSource } from "./useEventSource";
 
@@ -19,27 +19,20 @@ export interface AgentSessionData {
   } | null;
 }
 
+const AGENT_EVENTS = ["task.updated", "agent.disconnected"];
+
 export function useAgents() {
   const [agents, setAgents] = useState<AgentSessionData[]>([]);
-  const { lastEvent } = useEventSource();
 
-  useEffect(() => {
+  const refresh = useCallback(() => {
     get<Envelope<AgentSessionData[]>>("/api/agents").then((res) => {
       if (res.ok) setAgents(res.data);
     });
   }, []);
 
-  // Refresh on relevant events
-  useEffect(() => {
-    if (
-      lastEvent?.type === "task.updated" ||
-      lastEvent?.type === "agent.disconnected"
-    ) {
-      get<Envelope<AgentSessionData[]>>("/api/agents").then((res) => {
-        if (res.ok) setAgents(res.data);
-      });
-    }
-  }, [lastEvent]);
+  useEffect(() => { refresh(); }, [refresh]);
+
+  useEventSource(AGENT_EVENTS, refresh);
 
   return { agents };
 }

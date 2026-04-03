@@ -51,27 +51,39 @@ td task status G01.T001 ready`}
         }}
       >
         {/* Goal header row */}
-        {data.goals.map((g) => (
-          <div key={g.id} className="activity-header">
-            <ProgressRing
-              done={g.tasks.filter((t) => t.status === "done").length}
-              total={g.tasks.length}
-            />
-            <span className="activity-id">{g.shortId}</span>
-            <EditableText
-              value={g.title}
-              onSave={(t) => handleEditGoal(g.id, t)}
-              className="activity-title"
-            />
-            <button
-              className="btn-delete-subtle"
-              onClick={() => handleDeleteGoal(g.id)}
-              title="Delete goal"
-            >
-              ×
-            </button>
+        {data.goals.map((g) => {
+          const doneCount = g.tasks.filter((t) => t.status === "done").length;
+          const isComplete = g.tasks.length > 0 && doneCount === g.tasks.length;
+          return (
+          <div key={g.id} className={`activity-header${isComplete ? " activity-header--complete" : ""}`}>
+            <div className="activity-header-row">
+              <ProgressRing
+                done={doneCount}
+                total={g.tasks.length}
+              />
+              <span className="activity-id">{g.shortId}</span>
+              <EditableText
+                value={g.title}
+                onSave={(t) => handleEditGoal(g.id, t)}
+                className="activity-title"
+              />
+              <button
+                className="btn-delete-subtle"
+                onClick={() => handleDeleteGoal(g.id)}
+                title="Delete goal"
+              >
+                ×
+              </button>
+            </div>
+            <div className="goal-progress-track">
+              <div
+                className="goal-progress-fill"
+                style={{ width: g.tasks.length > 0 ? `${(doneCount / g.tasks.length) * 100}%` : "0%" }}
+              />
+            </div>
           </div>
-        ))}
+          );
+        })}
         <div className="grid-add-col">
           <AddForm placeholder="Goal" onAdd={handleAddGoal} />
         </div>
