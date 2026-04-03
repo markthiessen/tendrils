@@ -72,8 +72,93 @@ body {
 }
 
 .stat-archived {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
   color: #475569;
   font-style: italic;
+  cursor: pointer;
+}
+
+.stat-archived:hover {
+  color: #94a3b8;
+  text-decoration: underline;
+}
+
+/* Archived goals panel */
+
+.archived-goals {
+  max-width: 640px;
+}
+
+.archived-goals-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.archived-goals-header h3 {
+  margin: 0;
+  color: #e2e8f0;
+}
+
+.archived-goals-close {
+  background: none;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  color: #94a3b8;
+  font-size: 18px;
+  line-height: 1;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+
+.archived-goals-close:hover {
+  background: #1e293b;
+  color: #e2e8f0;
+}
+
+.archived-goals-empty {
+  color: #64748b;
+}
+
+.archived-goals-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.archived-goal-card {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 12px 16px;
+}
+
+.archived-goal-title {
+  color: #e2e8f0;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.archived-goal-id {
+  color: #64748b;
+  margin-right: 8px;
+  font-weight: 400;
+  font-size: 12px;
+}
+
+.archived-goal-summary {
+  color: #94a3b8;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.archived-goal-date {
+  color: #475569;
+  font-size: 12px;
 }
 
 .app-body {
@@ -1133,4 +1218,428 @@ body {
 
 .btn-danger:hover {
   background: #991b1b;
+}
+
+/* Review Queue */
+.stat-review {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: #f59e0b;
+  cursor: pointer;
+}
+
+.stat-review:hover {
+  text-decoration: underline;
+}
+
+.review-queue {
+  max-width: 720px;
+}
+
+.review-queue-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.review-queue-header h2 {
+  font-size: 18px;
+  color: #f1f5f9;
+  margin: 0;
+}
+
+.review-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.review-card {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+
+.review-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.review-card-goal {
+  font-size: 12px;
+  color: #64748b;
+  margin-left: auto;
+}
+
+.review-card-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #e2e8f0;
+  margin-bottom: 6px;
+}
+
+.review-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.review-reject-form {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.review-reject-form input {
+  flex: 1;
+  font-size: 12px;
+  padding: 6px 10px;
+  background: #0f172a;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  outline: none;
+}
+
+.review-reject-form input:focus {
+  border-color: #ef4444;
+}
+
+/* Agent Panel */
+.agent-panel h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f1f5f9;
+  margin-bottom: 8px;
+}
+
+.agent-panel-empty {
+  font-size: 12px;
+  color: #475569;
+  font-style: italic;
+}
+
+.agent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.agent-card {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.agent-card-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.agent-hb {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.agent-hb--green {
+  background: #10b981;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.4);
+}
+
+.agent-hb--yellow {
+  background: #f59e0b;
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.4);
+}
+
+.agent-hb--red {
+  background: #ef4444;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.4);
+}
+
+.agent-card-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #e2e8f0;
+}
+
+.agent-card-duration {
+  font-size: 11px;
+  color: #64748b;
+  font-family: monospace;
+  margin-left: auto;
+}
+
+.agent-card-task {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  margin-top: 4px;
+}
+
+.agent-card-task-id {
+  font-family: monospace;
+  font-size: 11px;
+  color: #3b82f6;
+}
+
+.agent-card-task-title {
+  font-size: 12px;
+  color: #94a3b8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-card--clickable {
+  cursor: pointer;
+}
+
+.agent-card--clickable:hover {
+  border-color: #3b82f6;
+}
+
+/* Agent Timeline */
+.agent-timeline-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.agent-timeline-header h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f1f5f9;
+  margin: 0;
+}
+
+.timeline-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.timeline-entry {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.timeline-entry-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.timeline-badge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+
+.timeline-badge--active {
+  background: #064e3b;
+  color: #6ee7b7;
+}
+
+.timeline-badge--idle {
+  background: #334155;
+  color: #94a3b8;
+}
+
+.timeline-badge--disconnected {
+  background: #7f1d1d;
+  color: #fca5a5;
+}
+
+.timeline-duration {
+  font-size: 12px;
+  font-family: monospace;
+  color: #94a3b8;
+}
+
+.timeline-outcome {
+  font-size: 10px;
+  padding: 0 4px;
+  border-radius: 3px;
+  margin-left: auto;
+}
+
+.timeline-outcome--done {
+  background: #064e3b;
+  color: #6ee7b7;
+}
+
+.timeline-outcome--cancelled {
+  background: #7f1d1d;
+  color: #fca5a5;
+}
+
+/* Task Proof */
+.task-proof {
+  margin-top: 6px;
+  padding: 6px 8px;
+  background: #064e3b;
+  border-radius: 4px;
+  border-left: 2px solid #10b981;
+}
+
+.task-proof-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #6ee7b7;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
+}
+
+.task-proof-text {
+  font-size: 12px;
+  color: #d1fae5;
+  white-space: pre-wrap;
+}
+
+/* Task Comments */
+.btn-comments {
+  padding: 3px 10px;
+  font-size: 11px;
+  border: 1px solid #475569;
+  border-radius: 4px;
+  background: #0f172a;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-comments:hover {
+  background: #1e293b;
+  border-color: #3b82f6;
+  color: #e2e8f0;
+}
+
+.task-comments {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #334155;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.task-comments-empty {
+  font-size: 11px;
+  color: #475569;
+  font-style: italic;
+}
+
+.task-comment {
+  padding: 6px 8px;
+  border-radius: 4px;
+  background: #0f172a;
+  font-size: 12px;
+}
+
+.task-comment--rejection {
+  border-left: 2px solid #ef4444;
+}
+
+.task-comment--approval {
+  border-left: 2px solid #10b981;
+}
+
+.task-comment-header {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 2px;
+}
+
+.task-comment-agent {
+  color: #8b5cf6;
+  font-size: 11px;
+}
+
+.task-comment-type {
+  font-size: 10px;
+  padding: 0 4px;
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+
+.task-comment-type--comment {
+  background: #334155;
+  color: #94a3b8;
+}
+
+.task-comment-type--approval {
+  background: #064e3b;
+  color: #6ee7b7;
+}
+
+.task-comment-type--rejection {
+  background: #7f1d1d;
+  color: #fca5a5;
+}
+
+.task-comment-time {
+  font-size: 10px;
+  color: #475569;
+  font-family: monospace;
+  margin-left: auto;
+}
+
+.task-comment-message {
+  color: #e2e8f0;
+}
+
+.task-comment-form {
+  display: flex;
+  gap: 4px;
+}
+
+.task-comment-form input {
+  flex: 1;
+  font-size: 11px;
+  padding: 4px 8px;
+  background: #0f172a;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  outline: none;
+}
+
+.task-comment-form input:focus {
+  border-color: #3b82f6;
+}
+
+.task-comment-form button {
+  font-size: 11px;
+  padding: 4px 10px;
+  background: #3b82f6;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.task-comment-form button:hover {
+  background: #2563eb;
+}
+
+.task-comment-form button:disabled {
+  opacity: 0.5;
+  cursor: default;
 }

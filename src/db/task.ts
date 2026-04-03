@@ -178,35 +178,44 @@ const DEP_FILTER = `AND t.id NOT IN (
 export function findNextTask(
   db: Database,
   repo?: string,
+  excludeRepos?: Set<string | null>,
 ): Task | undefined {
   let task: Task | undefined;
 
   const ARCHIVED_FILTER = `AND t.goal_id IN (SELECT id FROM goals WHERE archived_at IS NULL)`;
 
   if (repo) {
-    task = db
-      .prepare(
-        `SELECT t.* FROM tasks t
-         WHERE t.status = 'ready' AND t.repo = ?
-         ${DEP_FILTER}
-         ${ARCHIVED_FILTER}
-         ORDER BY t.goal_id, t.seq
-         LIMIT 1`,
-      )
-      .get(repo) as Task | undefined;
+    if (!excludeRepos?.has(repo)) {
+      task = db
+        .prepare(
+          `SELECT t.* FROM tasks t
+           WHERE t.status = 'ready' AND t.repo = ?
+           ${DEP_FILTER}
+           ${ARCHIVED_FILTER}
+           ORDER BY t.goal_id, t.seq
+           LIMIT 1`,
+        )
+        .get(repo) as Task | undefined;
+    }
   }
 
   if (!task) {
-    task = db
+    // Get all ready tasks and filter out busy repos in code
+    const candidates = db
       .prepare(
         `SELECT t.* FROM tasks t
          WHERE t.status = 'ready'
          ${DEP_FILTER}
          ${ARCHIVED_FILTER}
-         ORDER BY t.goal_id, t.seq
-         LIMIT 1`,
+         ORDER BY t.goal_id, t.seq`,
       )
-      .get() as Task | undefined;
+      .all() as Task[];
+
+    if (excludeRepos && excludeRepos.size > 0) {
+      task = candidates.find((t) => !excludeRepos.has(t.repo));
+    } else {
+      task = candidates[0];
+    }
   }
 
   return task;

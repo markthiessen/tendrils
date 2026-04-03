@@ -1,14 +1,17 @@
 import type { Command } from "commander";
 import { resolveWorkspace, findRepoRoot } from "../config/binding.js";
-import { getDb } from "../db/index.js";
+import { loadWorkspaceConfig } from "../config/index.js";
+import { getDb, getDecisionsDb } from "../db/index.js";
 import { findAllRepos } from "../db/repo.js";
 import { findTaskById, findNextTask } from "../db/task.js";
 import { insertLogEntry } from "../db/log.js";
+import { startSession, endSession, busyRepos, markDisconnectedAndRelease } from "../db/agent.js";
 import {
   getUnsatisfiedDependencies,
   findDependents,
   hasUnsatisfiedDependencies,
 } from "../db/dependency.js";
+import { assembleContext } from "../model/context.js";
 import {
   formatTaskId,
 } from "../model/id.js";
@@ -78,15 +81,52 @@ export function registerWorkflowCommands(program: Command): void {
     .command("next")
     .description("Show the highest-priority ready task to work on")
     .option("--repo <name>", "Prioritize tasks scoped to this repo/role (auto-detected from binding)")
-    .action((opts: { repo?: string }) => {
+    .option("--context", "Include context bundle (decisions, architecture, dependencies, feedback)")
+    .action((opts: { repo?: string; context?: boolean }) => {
       const ctx = getCtx(program);
       const resolved = resolveWorkspace(program.opts().workspace);
       const db = getDb(resolved.name);
       const repo = opts.repo ?? resolved.role;
-      const task = findNextTask(db, repo ?? undefined);
+
+      // Sweep stale sessions and release their claims before picking next task
+      const stale = markDisconnectedAndRelease(db);
+      for (const s of stale) {
+        const agent = s.agent_name;
+        if (s.task_id) {
+          insertLogEntry(db, "task", s.task_id, `Auto-released: agent '${agent}' disconnected (stale heartbeat)`, undefined, "in-progress", "ready");
+        }
+        if (!ctx.quiet) {
+          console.error(`Released stale claim by '${agent}' (no heartbeat for 5min)`);
+        }
+      }
+
+      // Check agent concurrency limits
+      const wsConfig = loadWorkspaceConfig(resolved.name);
+      const maxAgents = wsConfig?.workspace?.max_agents_per_repo ?? 0;
+      const excludeRepos = maxAgents > 0 ? busyRepos(db, maxAgents) : undefined;
+
+      const task = findNextTask(db, repo ?? undefined, excludeRepos);
 
       if (task) {
         const shortId = formatTaskId(task.goal_id, task.id);
+
+        if (opts.context) {
+          let decisionsDb = null;
+          try {
+            const repoRoot = findRepoRoot();
+            decisionsDb = getDecisionsDb(repoRoot);
+          } catch {
+            // no repo root — skip per-repo decisions
+          }
+          const context = assembleContext(db, decisionsDb, task);
+          outputSuccess(
+            ctx,
+            { ...task, shortId, entityType: "task", context },
+            `Next task: ${shortId} — ${task.title}`,
+          );
+          return;
+        }
+
         outputSuccess(
           ctx,
           { ...task, shortId, entityType: "task" },
@@ -123,12 +163,24 @@ export function claimTask(
 
     validateTaskTransition(task.status, "claimed");
 
-    db.prepare(
+    const result = db.prepare(
       `UPDATE tasks SET status = 'claimed', claimed_by = ?, claimed_at = datetime('now'),
-       updated_at = datetime('now') WHERE id = ?`,
-    ).run(agent ?? null, taskId);
+       version = version + 1, updated_at = datetime('now')
+       WHERE id = ? AND version = ?`,
+    ).run(agent ?? null, taskId, task.version);
+
+    if (result.changes === 0) {
+      throw new ConflictError(
+        "Task was modified concurrently — claim failed. Try again.",
+        { taskId, expectedVersion: task.version },
+      );
+    }
 
     insertLogEntry(db, "task", taskId, `Claimed by ${agent ?? "unknown"}`, agent, task.status, "claimed");
+
+    if (agent) {
+      startSession(db, agent, taskId, task.repo);
+    }
 
     return findTaskById(db, taskId)!;
   });
@@ -169,6 +221,8 @@ export function changeTaskStatus(
   newStatus: string,
   agent?: string,
   reason?: string,
+  output?: string,
+  proof?: string,
 ): void {
   if (!isValidTaskStatus(newStatus)) {
     throw new InvalidArgumentError(`Invalid task status: '${newStatus}'.`);
@@ -184,9 +238,15 @@ export function changeTaskStatus(
     return;
   }
 
+  if (newStatus === "review" && !proof) {
+    throw new InvalidArgumentError(
+      "Proof is required when submitting for review. Use --proof to explain what was done and how it was verified.",
+    );
+  }
+
   validateTaskTransition(task.status, newStatus);
 
-  const sets = ["status = ?", "updated_at = datetime('now')"];
+  const sets = ["status = ?", "version = version + 1", "updated_at = datetime('now')"];
   const values: unknown[] = [newStatus];
 
   if (newStatus === "blocked" && reason) {
@@ -194,6 +254,16 @@ export function changeTaskStatus(
     values.push(reason);
   } else if (task.blocked_reason && newStatus !== "blocked") {
     sets.push("blocked_reason = NULL");
+  }
+
+  if (newStatus === "done" && output) {
+    sets.push("output = ?");
+    values.push(output);
+  }
+
+  if (newStatus === "review" && proof) {
+    sets.push("proof = ?");
+    values.push(proof);
   }
 
   if (newStatus === "claimed" && agent) {
@@ -206,6 +276,11 @@ export function changeTaskStatus(
 
   const msg = reason ? `Status -> ${newStatus}: ${reason}` : `Status -> ${newStatus}`;
   insertLogEntry(db, "task", taskId, msg, agent, task.status, newStatus);
+
+  // End agent session when task leaves active work states
+  if (["done", "review", "cancelled"].includes(newStatus) && task.claimed_by) {
+    endSession(db, task.claimed_by, taskId);
+  }
 
   // Auto-block: if task moved to ready but has unsatisfied dependencies
   if (newStatus === "ready") {

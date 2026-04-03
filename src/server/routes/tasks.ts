@@ -1,8 +1,9 @@
 import type { FastifyInstance } from "fastify";
 import { insertTask, findAllTasks, findTaskById, updateTask, deleteTask, moveTask } from "../../db/task.js";
 import { insertLogEntry } from "../../db/log.js";
+import { insertComment, findCommentsByTask } from "../../db/comment.js";
 import { validateTaskTransition } from "../../model/status.js";
-import type { TaskStatus } from "../../model/types.js";
+import type { TaskStatus, CommentType } from "../../model/types.js";
 import { emit } from "../sse.js";
 import type { ServerContext } from "../context.js";
 
@@ -82,8 +83,14 @@ export function registerTaskRoutes(app: FastifyInstance, ctx: ServerContext) {
         return { ok: false, error: { code: "INVALID_TRANSITION", message: e.message } };
       }
 
-      db.prepare("UPDATE tasks SET status = 'claimed', claimed_by = ?, claimed_at = datetime('now'), updated_at = datetime('now') WHERE id = ?")
-        .run(req.body.agent ?? null, id);
+      const result = db.prepare(
+        "UPDATE tasks SET status = 'claimed', claimed_by = ?, claimed_at = datetime('now'), version = version + 1, updated_at = datetime('now') WHERE id = ? AND version = ?"
+      ).run(req.body.agent ?? null, id, task.version);
+
+      if (result.changes === 0) {
+        return { ok: false, error: { code: "CONFLICT", message: "Task was modified concurrently — claim failed. Try again." } };
+      }
+
       insertLogEntry(db, "task", id, `Claimed by ${req.body.agent ?? "unknown"}`, req.body.agent, task.status, "claimed");
 
       const updated = findTaskById(db, id)!;
@@ -121,7 +128,7 @@ export function registerTaskRoutes(app: FastifyInstance, ctx: ServerContext) {
         return { ok: false, error: { code: "INVALID_TRANSITION", message: e.message } };
       }
 
-      const sets = ["status = ?", "updated_at = datetime('now')"];
+      const sets = ["status = ?", "version = version + 1", "updated_at = datetime('now')"];
       const values: unknown[] = [newStatus];
 
       if (newStatus === "blocked" && req.body.reason) {
@@ -136,6 +143,76 @@ export function registerTaskRoutes(app: FastifyInstance, ctx: ServerContext) {
       insertLogEntry(db, "task", id, `Status -> ${newStatus}`, req.body.agent, task.status, newStatus);
 
       const updated = findTaskById(db, id)!;
+      emit("task.updated", updated);
+      return { ok: true, data: updated };
+    });
+  });
+
+  // --- Comments ---
+
+  app.get<{ Params: { id: string } }>("/api/tasks/:id/comments", (req) => {
+    return ctx.withDb((db) => {
+      const id = Number(req.params.id);
+      const task = findTaskById(db, id);
+      if (!task) return { ok: false, error: { code: "NOT_FOUND", message: "Task not found" } };
+      return { ok: true, data: findCommentsByTask(db, id) };
+    });
+  });
+
+  app.post<{ Params: { id: string }; Body: { message: string; type?: CommentType; agent?: string } }>("/api/tasks/:id/comments", (req) => {
+    return ctx.withDb((db) => {
+      const id = Number(req.params.id);
+      const task = findTaskById(db, id);
+      if (!task) return { ok: false, error: { code: "NOT_FOUND", message: "Task not found" } };
+
+      const comment = insertComment(db, id, req.body.message, req.body.type ?? "comment", req.body.agent);
+      emit("task.commented", { taskId: id, comment });
+      return { ok: true, data: comment };
+    });
+  });
+
+  // --- Accept / Reject ---
+
+  app.post<{ Params: { id: string }; Body: { agent?: string; message?: string } }>("/api/tasks/:id/accept", (req) => {
+    return ctx.withDb((db) => {
+      const id = Number(req.params.id);
+      const task = findTaskById(db, id);
+      if (!task) return { ok: false, error: { code: "NOT_FOUND", message: "Task not found" } };
+
+      if (task.status !== "review") {
+        return { ok: false, error: { code: "INVALID_TRANSITION", message: `Cannot accept task in '${task.status}' status — must be in review` } };
+      }
+
+      db.prepare("UPDATE tasks SET status = 'done', updated_at = datetime('now') WHERE id = ?").run(id);
+      insertLogEntry(db, "task", id, "Accepted", req.body.agent, "review", "done");
+
+      const msg = req.body.message ?? "Approved";
+      insertComment(db, id, msg, "approval", req.body.agent);
+
+      const updated = findTaskById(db, id)!;
+      emit("task.accepted", updated);
+      emit("task.updated", updated);
+      return { ok: true, data: updated };
+    });
+  });
+
+  app.post<{ Params: { id: string }; Body: { message: string; agent?: string } }>("/api/tasks/:id/reject", (req) => {
+    return ctx.withDb((db) => {
+      const id = Number(req.params.id);
+      const task = findTaskById(db, id);
+      if (!task) return { ok: false, error: { code: "NOT_FOUND", message: "Task not found" } };
+
+      if (task.status !== "review") {
+        return { ok: false, error: { code: "INVALID_TRANSITION", message: `Cannot reject task in '${task.status}' status — must be in review` } };
+      }
+
+      db.prepare("UPDATE tasks SET status = 'in-progress', updated_at = datetime('now') WHERE id = ?").run(id);
+      insertLogEntry(db, "task", id, `Rejected: ${req.body.message}`, req.body.agent, "review", "in-progress");
+
+      insertComment(db, id, req.body.message, "rejection", req.body.agent);
+
+      const updated = findTaskById(db, id)!;
+      emit("task.rejected", { task: updated, reason: req.body.message });
       emit("task.updated", updated);
       return { ok: true, data: updated };
     });

@@ -140,6 +140,8 @@ export function registerTaskCommand(program: Command): void {
         ["Claimed By", t.claimed_by ?? "(none)"],
         ["Repo", t.repo ?? "(none)"],
         ["Estimate", t.estimate ?? "(none)"],
+        ["Output", t.output ?? "(none)"],
+        ["Proof", t.proof ?? "(none)"],
       ];
 
       if (depLabels.length > 0) {
@@ -382,11 +384,13 @@ export function registerTaskCommand(program: Command): void {
     .argument("<id>", "Task ID")
     .argument("<new-status>", "New status")
     .option("--reason <text>", "Reason (for blocked status)")
+    .option("--output <text>", "Output summary (for done status — what was built)")
+    .option("--proof <text>", "Proof of completion (required for review status)")
     .option("-a, --agent <name>", "Agent name")
-    .action((idStr: string, newStatus: string, opts: { reason?: string; agent?: string }) => {
+    .action((idStr: string, newStatus: string, opts: { reason?: string; output?: string; proof?: string; agent?: string }) => {
       const ctx = getCtx(program);
       const db = resolveDb(program);
-      changeTaskStatus(ctx, db, parseTaskNum(idStr), newStatus, getAgent(opts), opts.reason);
+      changeTaskStatus(ctx, db, parseTaskNum(idStr), newStatus, getAgent(opts), opts.reason, opts.output, opts.proof);
     });
 }
 
