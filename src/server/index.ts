@@ -96,8 +96,6 @@ export async function createServer(name: string, port: number) {
   registerArchitectureRoutes(app, ctx);
   registerAgentRoutes(app, ctx);
 
-  await app.listen({ port, host: "0.0.0.0" });
-
   // Periodic sweep for stale agent sessions (every 60s)
   const sweepInterval = setInterval(() => {
     try {
@@ -116,6 +114,8 @@ export async function createServer(name: string, port: number) {
   }, 60_000);
 
   app.addHook("onClose", () => clearInterval(sweepInterval));
+
+  await app.listen({ port, host: "0.0.0.0" });
 
   return app;
 }

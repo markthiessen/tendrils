@@ -219,13 +219,49 @@ body {
 
 /* Activity Headers */
 .activity-header {
-  padding: 10px 12px;
+  padding: 10px 12px 6px;
   background: #1e293b;
   border: 1px solid #334155;
   font-weight: 600;
   display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: background 0.6s ease, border-color 0.6s ease, box-shadow 0.6s ease;
+}
+
+.activity-header-row {
+  display: flex;
   gap: 8px;
   align-items: center;
+}
+
+.activity-header--complete {
+  background: #064e3b;
+  border-color: #10b981;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.3);
+}
+
+.activity-header--complete .activity-id {
+  color: #6ee7b7;
+}
+
+.goal-progress-track {
+  width: 100%;
+  height: 3px;
+  background: #334155;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.goal-progress-fill {
+  height: 100%;
+  background: #3b82f6;
+  border-radius: 2px;
+  transition: width 0.6s ease, background 0.6s ease;
+}
+
+.activity-header--complete .goal-progress-fill {
+  background: #10b981;
 }
 
 .progress-ring {
@@ -478,6 +514,25 @@ body {
   margin-top: 2px;
 }
 
+.task-desc-toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-top: 2px;
+  font-size: 11px;
+  color: #475569;
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.task-desc-toggle:hover {
+  color: #64748b;
+}
+
 .task-claimed {
   font-size: 11px;
   color: #8b5cf6;
@@ -547,26 +602,63 @@ body {
   border-radius: 3px;
 }
 
-.task-actions {
-  display: flex;
-  gap: 4px;
-  margin-top: 8px;
+.task-overflow {
+  position: relative;
+  align-self: flex-end;
+  margin-top: 4px;
 }
 
-.task-actions button {
-  padding: 3px 10px;
-  font-size: 11px;
+.btn-overflow {
+  background: none;
+  border: none;
+  color: #475569;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0 4px;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.btn-overflow:hover {
+  color: #e2e8f0;
+}
+
+.overflow-menu {
+  position: absolute;
+  right: 0;
+  bottom: 100%;
+  margin-bottom: 4px;
+  background: #1e293b;
   border: 1px solid #475569;
-  border-radius: 4px;
-  background: #0f172a;
+  border-radius: 6px;
+  padding: 4px 0;
+  min-width: 130px;
+  z-index: 20;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+
+.overflow-menu button {
+  display: block;
+  width: 100%;
+  padding: 6px 12px;
+  font-size: 12px;
+  border: none;
+  background: none;
   color: #e2e8f0;
   cursor: pointer;
-  transition: background 0.15s;
+  text-align: left;
 }
 
-.task-actions button:hover {
-  background: #1e293b;
-  border-color: #3b82f6;
+.overflow-menu button:hover {
+  background: #334155;
+}
+
+.overflow-menu-danger {
+  color: #ef4444 !important;
+}
+
+.overflow-menu-danger:hover {
+  background: #3b1111 !important;
 }
 
 .btn-delete, .btn-delete-subtle {
@@ -1504,12 +1596,33 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: 2px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
 }
 
 .task-proof-text {
   font-size: 12px;
   color: #d1fae5;
   white-space: pre-wrap;
+}
+
+.task-proof-toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-top: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #6ee7b7;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+}
+
+.task-proof-toggle:hover {
+  color: #a7f3d0;
 }
 
 /* Task Comments */
