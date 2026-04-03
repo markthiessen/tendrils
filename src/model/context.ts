@@ -1,12 +1,34 @@
 import type { Database } from "../db/compat.js";
 import type { Task, Decision } from "./types.js";
-import { findTaskById } from "../db/task.js";
+import { findTaskById, findAllTasks } from "../db/task.js";
+import { findGoalById } from "../db/goal.js";
+import { findAllRepos } from "../db/repo.js";
 import { findDependencies } from "../db/dependency.js";
 import { findCommentsByTask } from "../db/comment.js";
 import { formatTaskId } from "./id.js";
 
+export interface GoalContext {
+  title: string;
+  description: string;
+}
+
+export interface SiblingContext {
+  shortId: string;
+  title: string;
+  status: string;
+  repo: string | null;
+  output: string | null;
+}
+
+export type DecisionSource = "workspace" | "repo";
+
+export type SourcedDecision = Decision & { source: DecisionSource };
+
 export interface ContextBundle {
-  decisions: Decision[];
+  goal: GoalContext | null;
+  siblings: SiblingContext[];
+  decisions: SourcedDecision[];
+  all_decision_count: number;
   architecture: string;
   dependencies: DependencyContext[];
   feedback: FeedbackEntry[];
@@ -30,10 +52,65 @@ export function assembleContext(
   decisionsDb: Database | null,
   task: Task,
 ): ContextBundle {
-  // 1. Related decisions — from workspace decisions DB (per-repo)
-  const decisions: Decision[] = decisionsDb
+  // 0. Parent goal context
+  const parentGoal = findGoalById(mapDb, task.goal_id);
+  const goal: GoalContext | null = parentGoal
+    ? { title: parentGoal.title, description: parentGoal.description }
+    : null;
+
+  // 0b. Sibling tasks under the same goal (excluding self)
+  const allGoalTasks = findAllTasks(mapDb, { goalId: task.goal_id });
+  const siblings: SiblingContext[] = allGoalTasks
+    .filter((t) => t.id !== task.id)
+    .map((t) => ({
+      shortId: formatTaskId(t.goal_id, t.id),
+      title: t.title,
+      status: t.status,
+      repo: t.repo,
+      output: t.output,
+    }));
+
+  // 1. Decisions from both workspace (map.db) and per-repo (decisions.db)
+  let workspaceDecisions: Decision[] = [];
+  try {
+    workspaceDecisions = mapDb
+      .prepare("SELECT * FROM decisions ORDER BY created_at DESC")
+      .all() as Decision[];
+  } catch {
+    // decisions table may not exist in older map.db
+  }
+
+  const repoDecisions: Decision[] = decisionsDb
     ? (decisionsDb.prepare("SELECT * FROM decisions ORDER BY created_at DESC").all() as Decision[])
     : [];
+
+  // Tag each decision with its source
+  const allSourced: SourcedDecision[] = [
+    ...workspaceDecisions.map((d) => ({ ...d, source: "workspace" as const })),
+    ...repoDecisions.map((d) => ({ ...d, source: "repo" as const })),
+  ];
+  const all_decision_count = allSourced.length;
+
+  // Filter by repo relevance when the task targets a specific repo
+  let decisions: SourcedDecision[];
+  if (task.repo && allSourced.length > 0) {
+    const repoRoles = new Set(
+      findAllRepos(mapDb)
+        .map((r) => r.role)
+        .filter((r): r is string => r != null),
+    );
+    decisions = allSourced.filter((d) => {
+      const tags = d.tags.split(",").map((t) => t.trim()).filter(Boolean);
+      // A decision is repo-scoped if any tag matches a known repo role
+      const scopedToRepo = tags.find((t) => repoRoles.has(t));
+      if (scopedToRepo) {
+        return tags.includes(task.repo!);
+      }
+      return true;
+    });
+  } else {
+    decisions = allSourced;
+  }
 
   // 2. Architecture diagram
   let architecture = "";
@@ -66,5 +143,5 @@ export function assembleContext(
       created_at: c.created_at,
     }));
 
-  return { decisions, architecture, dependencies, feedback };
+  return { goal, siblings, decisions, all_decision_count, architecture, dependencies, feedback };
 }
