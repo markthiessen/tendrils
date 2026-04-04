@@ -7,6 +7,7 @@ export interface ArchitectureNote {
   node_id: string;
   note_type: "node" | "edge";
   content: string;
+  repo_role: string | null;
 }
 
 export interface ArchitectureData {

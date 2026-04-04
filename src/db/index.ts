@@ -67,7 +67,7 @@ export function closeDb(): void {
 const MIGRATIONS = [
   S.SCHEMA_V1, S.SCHEMA_V2, S.SCHEMA_V3, S.SCHEMA_V4,
   S.SCHEMA_V5, S.SCHEMA_V6, S.SCHEMA_V7, S.SCHEMA_V8, S.SCHEMA_V9, S.SCHEMA_V10,
-  S.SCHEMA_V11, S.SCHEMA_V12, S.SCHEMA_V13, S.SCHEMA_V14, S.SCHEMA_V15,
+  S.SCHEMA_V11, S.SCHEMA_V12, S.SCHEMA_V13, S.SCHEMA_V14, S.SCHEMA_V15, S.SCHEMA_V16,
 ];
 
 function runMigrations(db: Database, fromVersion: number): void {

@@ -1089,6 +1089,52 @@ body {
   max-width: 100%;
 }
 
+.arch-tag-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 0 0;
+}
+
+.arch-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 9999px;
+  padding: 4px 12px;
+  font-size: 12px;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.arch-tag:hover {
+  border-color: #60a5fa;
+  color: #e2e8f0;
+}
+
+.arch-tag--active {
+  background: #1e3a5f;
+  border-color: #60a5fa;
+  color: #60a5fa;
+}
+
+.arch-tag-name {
+  font-weight: 500;
+  color: #e2e8f0;
+}
+
+.arch-tag--active .arch-tag-name {
+  color: #93c5fd;
+}
+
+.arch-tag-role {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
 .architecture-empty {
   font-size: 13px;
   color: #64748b;
@@ -1195,6 +1241,21 @@ body {
 .note-type-badge--edge {
   background: #3b1f4b;
   color: #c084fc;
+}
+
+.note-repo-badge {
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: #1a2e1a;
+  color: #4ade80;
+  font-family: -apple-system, sans-serif;
+}
+
+.architecture-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .architecture-note-editor {

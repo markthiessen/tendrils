@@ -10,6 +10,7 @@ export interface ArchitectureNote {
   node_id: string;
   note_type: "node" | "edge";
   content: string;
+  repo_role: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -52,15 +53,17 @@ export function upsertArchitectureNote(
   nodeId: string,
   noteType: "node" | "edge",
   content: string,
+  repoRole?: string,
 ): ArchitectureNote {
   db.prepare(
-    `INSERT INTO architecture_notes (node_id, note_type, content)
-     VALUES (?, ?, ?)
+    `INSERT INTO architecture_notes (node_id, note_type, content, repo_role)
+     VALUES (?, ?, ?, ?)
      ON CONFLICT(node_id) DO UPDATE SET
        content = excluded.content,
        note_type = excluded.note_type,
+       repo_role = COALESCE(excluded.repo_role, architecture_notes.repo_role),
        updated_at = datetime('now')`,
-  ).run(nodeId, noteType, content);
+  ).run(nodeId, noteType, content, repoRole ?? null);
   return db
     .prepare("SELECT * FROM architecture_notes WHERE node_id = ?")
     .get(nodeId) as ArchitectureNote;
