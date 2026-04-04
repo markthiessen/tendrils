@@ -67,21 +67,43 @@ export function TaskCard({ task, isNew, statusChanged, justDone }: Props) {
     >
       {justDone && <span className="task-card-checkmark">&#10003;</span>}
       <div className="task-card-header">
-        <span className="task-id">{task.shortId}</span>
         <TaskStatusRing status={task.status} />
+        <span className="task-id">{task.shortId}</span>
+        <EditableText
+          value={task.title}
+          onSave={handleTitleChange}
+          className="task-title"
+        />
+        <div className="task-overflow" ref={menuRef}>
+          <button className="btn-overflow" onClick={() => setShowMenu(!showMenu)}>&#x22EE;</button>
+          {showMenu && (
+            <div className="overflow-menu">
+              {task.status === "backlog" && (
+                <button onClick={() => { handleStatusChange("ready"); setShowMenu(false); }}>Ready</button>
+              )}
+              {task.status === "done" && (
+                <button onClick={() => { handleStatusChange("ready"); setShowMenu(false); }}>Reopen</button>
+              )}
+              <button onClick={() => { setShowComments(!showComments); setShowMenu(false); }}>
+                {showComments ? "Hide comments" : "Comments"}
+              </button>
+              <button className="overflow-menu-danger" onClick={() => { handleDelete(); setShowMenu(false); }}>Remove</button>
+            </div>
+          )}
+        </div>
       </div>
-      <EditableText
-        value={task.title}
-        onSave={handleTitleChange}
-        className="task-title"
-      />
       {task.description ? (
         showDesc ? (
-          <EditableText
-            value={task.description}
-            onSave={handleDescChange}
-            className="task-desc"
-          />
+          <div className="task-desc-expanded">
+            <button className="task-desc-toggle" onClick={() => setShowDesc(false)}>
+              &#x25BE;
+            </button>
+            <EditableText
+              value={task.description}
+              onSave={handleDescChange}
+              className="task-desc"
+            />
+          </div>
         ) : (
           <button className="task-desc-toggle" onClick={() => setShowDesc(true)}>
             &#x25B8; {task.description.length > 40 ? task.description.slice(0, 40) + "…" : task.description}
@@ -96,7 +118,7 @@ export function TaskCard({ task, isNew, statusChanged, justDone }: Props) {
           @{task.claimed_by}
         </div>
       )}
-      {task.proof && task.status === "review" && (
+      {task.proof && (task.status === "review" || task.status === "done") && (
         showProof ? (
           <div className="task-proof">
             <button className="task-proof-label" onClick={() => setShowProof(false)}>&#x25BE; Proof</button>
@@ -114,23 +136,6 @@ export function TaskCard({ task, isNew, statusChanged, justDone }: Props) {
           {task.repo && <span className="task-repo">{task.repo}</span>}
         </div>
       )}
-      <div className="task-overflow" ref={menuRef}>
-        <button className="btn-overflow" onClick={() => setShowMenu(!showMenu)}>&#x22EE;</button>
-        {showMenu && (
-          <div className="overflow-menu">
-            {task.status === "backlog" && (
-              <button onClick={() => { handleStatusChange("ready"); setShowMenu(false); }}>Ready</button>
-            )}
-            {task.status === "done" && (
-              <button onClick={() => { handleStatusChange("ready"); setShowMenu(false); }}>Reopen</button>
-            )}
-            <button onClick={() => { setShowComments(!showComments); setShowMenu(false); }}>
-              {showComments ? "Hide comments" : "Comments"}
-            </button>
-            <button className="overflow-menu-danger" onClick={() => { handleDelete(); setShowMenu(false); }}>Remove</button>
-          </div>
-        )}
-      </div>
       <TaskComments taskId={task.id} visible={showComments} />
     </div>
   );

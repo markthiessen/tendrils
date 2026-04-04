@@ -31,6 +31,22 @@ export function WorkspaceView() {
       />
       <div className="app-body">
         <main className="app-main">
+          {data.archivedCount > 0 && (
+            <div className="board-tabs">
+              <button
+                className={`board-tab ${!showArchived ? "board-tab-active" : ""}`}
+                onClick={() => { setShowArchived(false); setShowReview(false); }}
+              >
+                Board
+              </button>
+              <button
+                className={`board-tab ${showArchived ? "board-tab-active" : ""}`}
+                onClick={() => { setShowArchived(true); setShowReview(false); }}
+              >
+                Archived ({data.archivedCount})
+              </button>
+            </div>
+          )}
           {showArchived ? (
             <ArchivedGoals onClose={() => setShowArchived(false)} />
           ) : showReview ? (

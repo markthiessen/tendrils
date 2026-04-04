@@ -86,7 +86,7 @@ Then run `/td-finalize` to record decisions and confirm map state.
 **Auto mode** — mark done and loop:
 ```bash
 td log <id> "Done — <brief summary of what was built>" --agent claude
-td task status <id> done --agent claude --output "What was built — key files, endpoints, or components delivered"
+td task status <id> done --agent claude --output "What was built — key files, endpoints, or components delivered" --proof "What was changed, how it was verified, how Done-when criteria are met"
 ```
 Then run `td next --json` as a live command (not the pre-loaded output above). If another ready task is returned, go back to Step 3 and repeat. If the result is `null` or `data` is empty, stop and report how many tasks were completed. If a task hits a blocker during work, set it to blocked with a reason and stop the loop.
 
