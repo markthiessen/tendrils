@@ -52,35 +52,58 @@ If no `pr_url`, check for recent commits by the claiming agent:
 git log main.. --oneline --author=<claimed_by> 2>/dev/null
 ```
 
-### Step 3: Evaluate
+### Step 3: Evaluate on five axes
 
-Review the task against these criteria:
+Score each axis **pass** or **flag**. A flag means the work does not meet the bar for that axis.
 
-1. **Correctness** — Does the code do what the task asked for? Are there obvious bugs, edge cases missed, or broken logic?
-2. **Proof quality** — Did the agent provide structured proof (changes, verification, acceptance criteria mapping)? Is the proof specific or hand-wavy?
-3. **Conventions** — Does the code follow the project's established patterns and decisions? Any style violations or new patterns introduced without justification?
-4. **Scope** — Is the diff limited to what the task asked for? Any scope creep, speculative features, or unrelated cleanup?
-5. **Completeness** — Are all "Done when:" criteria addressed? Are tests included if the criteria mention them?
+| # | Axis | Pass when | Flag when |
+|---|------|-----------|-----------|
+| 1 | **Correctness** | Code does what the task description says. No obvious bugs, broken logic, or missed edge cases. | Behavior diverges from task description, tests fail, or clear edge cases are unhandled. |
+| 2 | **Proof quality** | Proof references concrete evidence — test output, build logs, specific file/line citations. Three-part structure (changes, verification, acceptance criteria mapping) is present. | Proof is vague ("it works"), missing sections, or contains no verifiable evidence. |
+| 3 | **Conventions** | Follows patterns and decisions recorded in `td decisions`. No undocumented pattern drift. | Introduces new patterns that contradict existing decisions, or ignores conventions without justification. |
+| 4 | **Scope** | Diff is limited to what the task asked for. No unrelated changes, speculative features, or drive-by refactors. | Contains changes outside the task boundary — unrelated cleanup, extra features, or files the task didn't mention. |
+| 5 | **Completeness** | Every "Done when:" criterion from the task description is addressed in the proof with matching evidence. | One or more "Done when:" items are unaddressed, or tests required by the criteria are missing. |
 
-For each criterion, note whether it passes, fails, or needs attention.
+Build a **scorecard** for each task:
 
-**In normal mode**: present your findings to the user for each task and ask whether to accept or reject. Include your recommendation with reasoning.
+```
+Scorecard for <task-id>:
+  1. Correctness:  pass | flag — <one-line reasoning>
+  2. Proof quality: pass | flag — <one-line reasoning>
+  3. Conventions:   pass | flag — <one-line reasoning>
+  4. Scope:         pass | flag — <one-line reasoning>
+  5. Completeness:  pass | flag — <one-line reasoning>
+  Verdict: accept | reject
+```
 
-**In auto mode**: make the decision yourself based on the criteria above. Accept if all five criteria pass. Reject if any criterion fails — provide specific feedback on what needs fixing.
+**Verdict rules:**
+- All five axes pass → **accept**
+- Any axis flagged → **reject**
+
+**In normal mode**: present the scorecard to the user and ask whether to accept or reject. Include your recommendation.
+
+**In auto mode**: apply the verdict rules automatically. Accept if all pass. Reject if any flagged.
 
 ### Step 4: Accept or reject
 
-**To accept:**
+**To accept** (all axes pass):
 ```bash
-td task accept <id> --agent claude --message "<brief summary of what was reviewed and why it passes>"
+td task accept <id> --agent claude --message "All review axes pass. <brief summary of what was verified>"
 ```
 
-**To reject:**
+**To reject** (one or more axes flagged):
+
+Rejection **must** specify which axes were flagged. Use this format:
 ```bash
-td task reject <id> --agent claude --message "<specific feedback: which criteria failed, what to fix, and where>"
+td task reject <id> --agent claude --message "Flagged axes: <list>. <specific feedback per flagged axis: what failed, what to fix, file/line references>"
 ```
 
-Rejection messages must be actionable — the agent picking the task back up will see this as feedback in their context bundle. Be specific: cite file names, line numbers, and the criterion that failed.
+Example rejection:
+```bash
+td task reject <id> --agent claude --message "Flagged axes: Scope, Completeness. Scope: diff includes unrelated refactor of utils/logger.ts not in task description. Completeness: 'Done when: CLI help text updated' is not addressed — help output still shows old flag name."
+```
+
+Rejection messages must be actionable — the agent picking the task back up will see this as feedback in their context bundle. Every flagged axis must have specific feedback with file names, line numbers, or concrete observations.
 
 ### Step 5: Continue or finish
 
