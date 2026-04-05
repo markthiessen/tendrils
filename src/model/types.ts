@@ -34,7 +34,9 @@ export interface Task {
   estimate: string | null;
   repo: string | null;
   output: string | null;
+  pr_url: string | null;
   proof: string | null;
+  shipped: boolean;
   version: number;
   created_at: string;
   updated_at: string;

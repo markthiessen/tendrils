@@ -48,4 +48,4 @@ Show the cleaned-up map and the list of archived goals.
 
 - **Always ask before archiving** — never archive without user confirmation.
 - Summaries should describe what was built or decided, not just restate the goal title.
-- If no goals are fully completed, tell the user and suggest running `/td-finalize` first.
+- If no goals are fully completed, tell the user and suggest running `/td-next` to continue work or `/td-review` to review pending tasks.

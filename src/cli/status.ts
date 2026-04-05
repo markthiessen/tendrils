@@ -214,6 +214,20 @@ export function unclaimTask(
   outputSuccess(ctx, { ...updated, shortId }, `Unclaimed task ${shortId}.`);
 }
 
+export function normalizePrRef(raw: string): string {
+  // Accept owner/repo#number directly
+  const shortForm = raw.match(/^([\w.-]+\/[\w.-]+)#(\d+)$/);
+  if (shortForm) return raw;
+
+  // Accept full GitHub URL: https://github.com/owner/repo/pull/123
+  const urlForm = raw.match(/^https?:\/\/github\.com\/([\w.-]+\/[\w.-]+)\/pull\/(\d+)/);
+  if (urlForm) return `${urlForm[1]}#${urlForm[2]}`;
+
+  throw new InvalidArgumentError(
+    `Invalid PR reference: '${raw}'. Expected owner/repo#number or a GitHub pull request URL.`,
+  );
+}
+
 export function changeTaskStatus(
   ctx: OutputContext,
   db: import("../db/compat.js").Database,
@@ -223,6 +237,7 @@ export function changeTaskStatus(
   reason?: string,
   output?: string,
   proof?: string,
+  prUrl?: string,
 ): void {
   if (!isValidTaskStatus(newStatus)) {
     throw new InvalidArgumentError(`Invalid task status: '${newStatus}'.`);
@@ -244,6 +259,9 @@ export function changeTaskStatus(
     );
   }
 
+  // Normalize PR reference if provided
+  const normalizedPr = prUrl ? normalizePrRef(prUrl) : undefined;
+
   validateTaskTransition(task.status, newStatus);
 
   const sets = ["status = ?", "version = version + 1", "updated_at = datetime('now')"];
@@ -264,6 +282,11 @@ export function changeTaskStatus(
   if (newStatus === "review" && proof) {
     sets.push("proof = ?");
     values.push(proof);
+  }
+
+  if (normalizedPr) {
+    sets.push("pr_url = ?");
+    values.push(normalizedPr);
   }
 
   if (newStatus === "claimed" && agent) {

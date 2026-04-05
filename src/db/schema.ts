@@ -406,6 +406,20 @@ INSERT OR IGNORE INTO schema_version (version) VALUES (16);
 COMMIT;
 `;
 
+export const SCHEMA_V17 = `
+BEGIN;
+ALTER TABLE tasks ADD COLUMN pr_url TEXT;
+INSERT OR IGNORE INTO schema_version (version) VALUES (17);
+COMMIT;
+`;
+
+export const SCHEMA_V18 = `
+BEGIN;
+ALTER TABLE tasks ADD COLUMN shipped INTEGER NOT NULL DEFAULT 0;
+INSERT OR IGNORE INTO schema_version (version) VALUES (18);
+COMMIT;
+`;
+
 // Per-repo decisions database schema (lives at ~/.tendrils/repos/<hash>/decisions.db)
 export const DECISIONS_SCHEMA_V1 = `
 PRAGMA foreign_keys = ON;

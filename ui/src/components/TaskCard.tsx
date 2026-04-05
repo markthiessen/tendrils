@@ -69,11 +69,7 @@ export function TaskCard({ task, isNew, statusChanged, justDone }: Props) {
       <div className="task-card-header">
         <TaskStatusRing status={task.status} />
         <span className="task-id">{task.shortId}</span>
-        <EditableText
-          value={task.title}
-          onSave={handleTitleChange}
-          className="task-title"
-        />
+        <div className="task-card-header-spacer" />
         <div className="task-overflow" ref={menuRef}>
           <button className="btn-overflow" onClick={() => setShowMenu(!showMenu)}>&#x22EE;</button>
           {showMenu && (
@@ -92,6 +88,11 @@ export function TaskCard({ task, isNew, statusChanged, justDone }: Props) {
           )}
         </div>
       </div>
+      <EditableText
+        value={task.title}
+        onSave={handleTitleChange}
+        className="task-title"
+      />
       {task.description ? (
         showDesc ? (
           <div className="task-desc-expanded">
@@ -130,10 +131,23 @@ export function TaskCard({ task, isNew, statusChanged, justDone }: Props) {
           </button>
         )
       )}
-      {(task.estimate || task.repo) && (
+      {(task.estimate || task.repo || task.pr_url) && (
         <div className="task-meta">
           {task.estimate && <span className="task-estimate">{task.estimate}</span>}
           {task.repo && <span className="task-repo">{task.repo}</span>}
+          {task.pr_url && (
+            <a
+              className="task-pr"
+              href={task.pr_url.match(/^https?:\/\//) ? task.pr_url : `https://github.com/${task.pr_url.replace(/#/, "/pull/")}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {task.pr_url.match(/^https?:\/\//)
+                ? `#${task.pr_url.match(/\/pull\/(\d+)/)?.[1] ?? task.pr_url}`
+                : `#${task.pr_url.split("#")[1]}`}
+            </a>
+          )}
         </div>
       )}
       <TaskComments taskId={task.id} visible={showComments} />

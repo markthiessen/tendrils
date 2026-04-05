@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { insertTask, findAllTasks, findTaskById, updateTask, deleteTask, moveTask } from "../../db/task.js";
+import { insertTask, findAllTasks, findTaskById, updateTask, deleteTask, moveTask, shipTask } from "../../db/task.js";
 import { insertLogEntry } from "../../db/log.js";
 import { insertComment, findCommentsByTask } from "../../db/comment.js";
 import { validateTaskTransition } from "../../model/status.js";
@@ -115,7 +115,7 @@ export function registerTaskRoutes(app: FastifyInstance, ctx: ServerContext) {
     });
   });
 
-  app.post<{ Params: { id: string }; Body: { status: string; reason?: string; agent?: string } }>("/api/tasks/:id/status", (req) => {
+  app.post<{ Params: { id: string }; Body: { status: string; reason?: string; agent?: string; pr_url?: string } }>("/api/tasks/:id/status", (req) => {
     return ctx.withDb((db) => {
       const id = Number(req.params.id);
       const task = findTaskById(db, id);
@@ -136,6 +136,11 @@ export function registerTaskRoutes(app: FastifyInstance, ctx: ServerContext) {
         values.push(req.body.reason);
       } else if (task.blocked_reason && newStatus !== "blocked") {
         sets.push("blocked_reason = NULL");
+      }
+
+      if (req.body.pr_url) {
+        sets.push("pr_url = ?");
+        values.push(req.body.pr_url);
       }
 
       values.push(id);
@@ -193,6 +198,19 @@ export function registerTaskRoutes(app: FastifyInstance, ctx: ServerContext) {
       emit("task.accepted", updated);
       emit("task.updated", updated);
       return { ok: true, data: updated };
+    });
+  });
+
+  app.post<{ Params: { id: string } }>("/api/tasks/:id/ship", (req) => {
+    return ctx.withDb((db) => {
+      try {
+        const t = shipTask(db, Number(req.params.id));
+        emit("task.updated", t);
+        return { ok: true, data: t };
+      } catch (e: any) {
+        const code = e.name === "NotFoundError" ? "NOT_FOUND" : "INVALID_ARGUMENT";
+        return { ok: false, error: { code, message: e.message } };
+      }
     });
   });
 

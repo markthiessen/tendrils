@@ -1,5 +1,6 @@
 import type { Database } from "./compat.js";
 import type { Task } from "../model/types.js";
+import { InvalidArgumentError, NotFoundError } from "../errors.js";
 
 export function insertTask(
   db: Database,
@@ -79,6 +80,7 @@ export function updateTask(
     description?: string;
     estimate?: string | null;
     repo?: string | null;
+    pr_url?: string | null;
   },
 ): Task | undefined {
   const sets: string[] = [];
@@ -99,6 +101,10 @@ export function updateTask(
   if (fields.repo !== undefined) {
     sets.push("repo = ?");
     values.push(fields.repo);
+  }
+  if (fields.pr_url !== undefined) {
+    sets.push("pr_url = ?");
+    values.push(fields.pr_url);
   }
   if (sets.length === 0) return findTaskById(db, id);
 
@@ -167,6 +173,20 @@ export function reorderTask(
     siblings.forEach((t, i) => update.run(i + 1, t.id));
   });
   txn();
+}
+
+export function shipTask(db: Database, id: number): Task {
+  const task = findTaskById(db, id);
+  if (!task) throw new NotFoundError("task", `T${id}`);
+  if (task.status !== "done" && task.status !== "cancelled") {
+    throw new InvalidArgumentError(
+      `Cannot ship task in '${task.status}' status — must be done or cancelled.`,
+    );
+  }
+  db.prepare(
+    "UPDATE tasks SET shipped = 1, updated_at = datetime('now') WHERE id = ?",
+  ).run(id);
+  return findTaskById(db, id)!;
 }
 
 const DEP_FILTER = `AND t.id NOT IN (
