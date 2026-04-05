@@ -137,25 +137,9 @@ td log <id> "Self-review complete — <any issues found and fixed>" --agent clau
 
 ### Step 8: Wrap up and mark for review
 
-Proof was assembled in Step 6. Before submitting, handle PR creation and decision recording.
+Proof was assembled in Step 6. Before submitting, handle decision recording.
 
-#### Create a PR (if needed)
-
-Check whether the work needs a PR:
-```bash
-git branch --show-current
-git log main.. --oneline
-```
-
-- If on main or `git log main..` is empty: work is already merged — skip PR creation.
-- Otherwise: create a PR for the current branch:
-  ```bash
-  gh pr create --title "<task title>" --body "<brief description of changes>"
-  ```
-  Record the PR URL on the task:
-  ```bash
-  td task status <id> --pr <pr_url> --agent claude
-  ```
+**Do not create a PR.** PR creation is the user's responsibility — they can run `/td-submit` when ready.
 
 #### Record decisions
 
