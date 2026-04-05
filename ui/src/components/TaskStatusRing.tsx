@@ -9,7 +9,7 @@ const STATUS_CONFIG: Record<string, { pct: number; color: string }> = {
   blocked: { pct: 0.6, color: "#ef4444" },
 };
 
-export function TaskStatusRing({ status, size = 18 }: { status: string; size?: number }) {
+export function TaskStatusRing({ status, shipped, size = 18 }: { status: string; shipped?: boolean; size?: number }) {
   const { pct, color } = STATUS_CONFIG[status] ?? { pct: 0, color: "#6b7280" };
   const strokeWidth = 2;
   const radius = (size - strokeWidth) / 2;
@@ -17,6 +17,18 @@ export function TaskStatusRing({ status, size = 18 }: { status: string; size?: n
   const offset = circumference * (1 - pct);
   const isBlocked = status === "blocked";
   const isCancelled = status === "cancelled";
+
+  if (shipped) {
+    return (
+      <span
+        className="task-status-ring task-status-shipped"
+        title="shipped"
+        style={{ display: "inline-block", width: size, height: size, lineHeight: `${size}px`, textAlign: "center", fontSize: size * 0.75 }}
+      >
+        🚀
+      </span>
+    );
+  }
 
   return (
     <svg

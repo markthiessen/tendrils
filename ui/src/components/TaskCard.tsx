@@ -67,7 +67,7 @@ export function TaskCard({ task, isNew, statusChanged, justDone }: Props) {
     >
       {justDone && <span className="task-card-checkmark">&#10003;</span>}
       <div className="task-card-header">
-        <TaskStatusRing status={task.status} />
+        <TaskStatusRing status={task.status} shipped={task.shipped} />
         <span className="task-id">{task.shortId}</span>
         <div className="task-card-header-spacer" />
         <div className="task-overflow" ref={menuRef}>

@@ -14,6 +14,16 @@ You are archiving completed goals to clean up the active map. Archived goals are
 
 ## Instructions
 
+### Step 0: Sync shipped status
+
+Before archiving, ensure shipped status is up to date. Run:
+
+```bash
+td sync
+```
+
+This checks done tasks against GitHub PRs and marks merged ones as shipped. `td goal archive` will warn if any done tasks aren't shipped yet.
+
 ### Step 1: Identify fully-completed goals
 
 Review the map and task list above. A goal is fully completed when **every** task under it is `done` or `cancelled`. Never archive a goal that has tasks in any other status.
@@ -33,6 +43,12 @@ For each confirmed goal:
 
 ```bash
 td goal archive <id> --summary "<one-sentence summary>"
+```
+
+If the command warns about unshipped tasks, run `td sync` first to check PR merge status. If tasks genuinely don't need PRs (e.g. planning-only tasks), use `--force`:
+
+```bash
+td goal archive <id> --summary "<summary>" --force
 ```
 
 ### Step 4: Show result
