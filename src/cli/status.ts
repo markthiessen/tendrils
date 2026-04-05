@@ -214,7 +214,7 @@ export function unclaimTask(
   outputSuccess(ctx, { ...updated, shortId }, `Unclaimed task ${shortId}.`);
 }
 
-function normalizePrRef(raw: string): string {
+export function normalizePrRef(raw: string): string {
   // Accept owner/repo#number directly
   const shortForm = raw.match(/^([\w.-]+\/[\w.-]+)#(\d+)$/);
   if (shortForm) return raw;

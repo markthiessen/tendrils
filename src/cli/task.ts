@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { claimTask, unclaimTask, changeTaskStatus, getAgent } from "./status.js";
+import { claimTask, unclaimTask, changeTaskStatus, getAgent, normalizePrRef } from "./status.js";
 import {
   insertTask,
   findAllTasks,
@@ -176,10 +176,11 @@ export function registerTaskCommand(program: Command): void {
     .option("-d, --desc <text>", "New description")
     .option("-e, --estimate <size>", "New estimate")
     .option("-r, --repo <name>", "Repo/role this task belongs to")
+    .option("--pr <url>", "PR reference (owner/repo#number or GitHub URL)")
     .action(
       (
         idStr: string,
-        opts: { title?: string; desc?: string; estimate?: string; repo?: string },
+        opts: { title?: string; desc?: string; estimate?: string; repo?: string; pr?: string },
       ) => {
         const ctx = getCtx(program);
         const db = resolveDb(program);
@@ -190,6 +191,7 @@ export function registerTaskCommand(program: Command): void {
           description: opts.desc,
           estimate: opts.estimate,
           repo: opts.repo,
+          pr_url: opts.pr ? normalizePrRef(opts.pr) : undefined,
         });
         if (!t) throw new NotFoundError("task", idStr);
         const shortId = formatTaskId(t.goal_id, t.id);
