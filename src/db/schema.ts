@@ -399,6 +399,13 @@ INSERT OR IGNORE INTO schema_version (version) VALUES (15);
 COMMIT;
 `;
 
+export const SCHEMA_V16 = `
+BEGIN;
+ALTER TABLE architecture_notes ADD COLUMN repo_role TEXT;
+INSERT OR IGNORE INTO schema_version (version) VALUES (16);
+COMMIT;
+`;
+
 // Per-repo decisions database schema (lives at ~/.tendrils/repos/<hash>/decisions.db)
 export const DECISIONS_SCHEMA_V1 = `
 PRAGMA foreign_keys = ON;

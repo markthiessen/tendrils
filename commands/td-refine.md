@@ -16,6 +16,10 @@ You are filling in the local details for tasks that were planned from another re
 
 !`td decisions 2>/dev/null`
 
+## Architecture
+
+!`td arch 2>/dev/null`
+
 ## Instructions
 
 ### Step 1: Identify this repo

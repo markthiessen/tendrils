@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import mermaid from "mermaid";
 import { useArchitecture, type ArchitectureNote } from "../hooks/useArchitecture";
+import { useRepos } from "../hooks/useRepos";
 
 mermaid.initialize({
   startOnLoad: false,
@@ -8,24 +9,51 @@ mermaid.initialize({
   securityLevel: "loose",
 });
 
+function buildHighlightedSource(source: string, notes: ArchitectureNote[], selectedRole: string | null): string {
+  if (!selectedRole || !source) return source;
+  const ownedIds = notes.filter((n) => n.repo_role === selectedRole).map((n) => n.node_id);
+  if (ownedIds.length === 0) return source;
+  const dimmedIds = notes.filter((n) => n.repo_role && n.repo_role !== selectedRole).map((n) => n.node_id);
+  const lines = [source];
+  lines.push("  classDef owned stroke:#60a5fa,stroke-width:3px,color:#f1f5f9");
+  lines.push("  classDef dimmed opacity:0.4");
+  if (ownedIds.length > 0) lines.push(`  class ${ownedIds.join(",")} owned`);
+  if (dimmedIds.length > 0) lines.push(`  class ${dimmedIds.join(",")} dimmed`);
+  return lines.join("\n");
+}
+
 export function ArchitectureDiagram() {
   const { data, updateDiagram, updateNote, deleteNote } = useArchitecture();
+  const { repos } = useRepos();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const [selectedNote, setSelectedNote] = useState<ArchitectureNote | null>(null);
   const [noteContent, setNoteContent] = useState("");
   const [newNodeId, setNewNodeId] = useState("");
   const [newNoteType, setNewNoteType] = useState<"node" | "edge">("node");
+  const [repoFilter, setRepoFilter] = useState<string | null>(null);
   const diagramRef = useRef<HTMLDivElement>(null);
   const renderCounter = useRef(0);
 
+  const repoRoles = useMemo(() => {
+    const seen = new Set<string>();
+    return repos
+      .filter((r): r is typeof r & { role: string } => r.role != null && !seen.has(r.role) && !!seen.add(r.role))
+      .map((r) => ({ role: r.role, name: r.name }));
+  }, [repos]);
+
+  const renderSource = useMemo(
+    () => buildHighlightedSource(data.mermaid_source, data.notes, repoFilter),
+    [data.mermaid_source, data.notes, repoFilter],
+  );
+
   useEffect(() => {
-    if (editing || !data.mermaid_source || !diagramRef.current) return;
+    if (editing || !renderSource || !diagramRef.current) return;
     let cancelled = false;
     const renderId = `arch-${++renderCounter.current}`;
     (async () => {
       try {
-        const { svg } = await mermaid.render(renderId, data.mermaid_source);
+        const { svg } = await mermaid.render(renderId, renderSource);
         if (!cancelled && diagramRef.current) {
           diagramRef.current.innerHTML = svg;
         }
@@ -36,7 +64,7 @@ export function ArchitectureDiagram() {
       }
     })();
     return () => { cancelled = true; };
-  }, [data.mermaid_source, editing]);
+  }, [renderSource, editing]);
 
   const handleStartEdit = () => {
     setDraft(data.mermaid_source);
@@ -81,11 +109,13 @@ export function ArchitectureDiagram() {
     <div className="architecture-section">
       <div className="architecture-header">
         <h3>Architecture</h3>
-        {!editing && (
-          <button className="btn-secondary" onClick={handleStartEdit}>
-            {data.mermaid_source ? "Edit Diagram" : "Create Diagram"}
-          </button>
-        )}
+        <div className="architecture-header-actions">
+          {!editing && (
+            <button className="btn-secondary" onClick={handleStartEdit}>
+              {data.mermaid_source ? "Edit Diagram" : "Create Diagram"}
+            </button>
+          )}
+        </div>
       </div>
 
       {editing ? (
@@ -103,7 +133,23 @@ export function ArchitectureDiagram() {
           </div>
         </div>
       ) : data.mermaid_source ? (
-        <div className="architecture-diagram" ref={diagramRef} />
+        <>
+          <div className="architecture-diagram" ref={diagramRef} />
+          {repoRoles.length > 0 && (
+            <div className="arch-tag-bar">
+              {repoRoles.map(({ role, name }) => (
+                <button
+                  key={role}
+                  className={`arch-tag${repoFilter === role ? " arch-tag--active" : ""}`}
+                  onClick={() => setRepoFilter(repoFilter === role ? null : role)}
+                >
+                  <span className="arch-tag-name">{name}</span>
+                  <span className="arch-tag-role">{role}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </>
       ) : (
         <div className="empty-state" style={{ padding: "40px 24px" }}>
           <h2>No architecture diagram yet</h2>
@@ -139,6 +185,9 @@ td arch note db "SQLite with WAL mode"`}
                   {note.note_type}
                 </span>
                 {note.node_id}
+                {note.repo_role && (
+                  <span className="note-repo-badge">{note.repo_role}</span>
+                )}
               </span>
               <span className="architecture-note-content">{note.content || "(empty)"}</span>
             </div>

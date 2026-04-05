@@ -16,7 +16,9 @@ If args contain `auto`, run in **auto mode**: skip confirmation, complete tasks 
 
 !`td next --context --json 2>/dev/null || echo "null"`
 
-The context bundle includes: related decisions, architecture diagram, dependency chain with outputs, and any rejection feedback from prior attempts. Use this instead of looking up decisions separately.
+The context bundle includes: related decisions, architecture diagram + notes, dependency chain with outputs, and any rejection feedback from prior attempts. Use this instead of looking up decisions separately.
+
+If `context.relevant_nodes` is non-empty, those are the architecture diagram nodes owned by this repo — focus your work on those components.
 
 ## Current map
 
@@ -66,6 +68,8 @@ Read the task description carefully — it should include:
 Use the **context bundle** from the next item above:
 - `context.decisions` — architectural decisions relevant to this repo
 - `context.architecture` — the Mermaid architecture diagram
+- `context.architecture_notes` — per-node notes with repo ownership
+- `context.relevant_nodes` — diagram nodes owned by this repo (your components)
 - `context.dependencies` — upstream tasks with their outputs (what was built)
 - `context.feedback` — any rejection comments from prior review attempts (address these first!)
 

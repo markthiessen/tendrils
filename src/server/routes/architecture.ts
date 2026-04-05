@@ -28,7 +28,7 @@ export function registerArchitectureRoutes(app: FastifyInstance, ctx: ServerCont
 
   app.put<{
     Params: { nodeId: string };
-    Body: { note_type: "node" | "edge"; content: string };
+    Body: { note_type: "node" | "edge"; content: string; repo_role?: string };
   }>("/api/architecture/notes/:nodeId", (req) => {
     return ctx.withDb((db) => {
       const note = upsertArchitectureNote(
@@ -36,6 +36,7 @@ export function registerArchitectureRoutes(app: FastifyInstance, ctx: ServerCont
         req.params.nodeId,
         req.body.note_type,
         req.body.content,
+        req.body.repo_role,
       );
       emit("architecture.note.updated", note);
       return { ok: true, data: note };

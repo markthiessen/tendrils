@@ -5,6 +5,7 @@ import { findGoalById } from "../db/goal.js";
 import { findAllRepos } from "../db/repo.js";
 import { findDependencies } from "../db/dependency.js";
 import { findCommentsByTask } from "../db/comment.js";
+import { findAllArchitectureNotes, type ArchitectureNote } from "../db/architecture.js";
 import { formatTaskId } from "./id.js";
 
 export interface GoalContext {
@@ -30,6 +31,8 @@ export interface ContextBundle {
   decisions: SourcedDecision[];
   all_decision_count: number;
   architecture: string;
+  architecture_notes: ArchitectureNote[];
+  relevant_nodes: string[];
   dependencies: DependencyContext[];
   feedback: FeedbackEntry[];
 }
@@ -112,13 +115,43 @@ export function assembleContext(
     decisions = allSourced;
   }
 
-  // 2. Architecture diagram
+  // 2. Architecture diagram + notes
   let architecture = "";
   try {
     const arch = mapDb.prepare("SELECT mermaid_source FROM architecture WHERE id = 1").get() as { mermaid_source: string } | undefined;
     architecture = arch?.mermaid_source ?? "";
   } catch {
     // table may not exist
+  }
+
+  let allNotes: ArchitectureNote[] = [];
+  try {
+    allNotes = findAllArchitectureNotes(mapDb);
+  } catch {
+    // table may not exist
+  }
+
+  // Filter notes by repo relevance (same pattern as decisions)
+  let architecture_notes: ArchitectureNote[];
+  let relevant_nodes: string[];
+  if (task.repo && allNotes.length > 0) {
+    const repoRoles = new Set(
+      findAllRepos(mapDb)
+        .map((r) => r.role)
+        .filter((r): r is string => r != null),
+    );
+    architecture_notes = allNotes.filter((n) => {
+      if (n.repo_role && repoRoles.has(n.repo_role)) {
+        return n.repo_role === task.repo;
+      }
+      return true; // unscoped notes always included
+    });
+    relevant_nodes = allNotes
+      .filter((n) => n.repo_role === task.repo)
+      .map((n) => n.node_id);
+  } else {
+    architecture_notes = allNotes;
+    relevant_nodes = [];
   }
 
   // 3. Dependency chain with outputs
@@ -143,5 +176,5 @@ export function assembleContext(
       created_at: c.created_at,
     }));
 
-  return { goal, siblings, decisions, all_decision_count, architecture, dependencies, feedback };
+  return { goal, siblings, decisions, all_decision_count, architecture, architecture_notes, relevant_nodes, dependencies, feedback };
 }

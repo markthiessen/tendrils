@@ -217,7 +217,8 @@ export function registerDecisionCommands(program: Command): void {
       if (notes.length > 0) {
         lines.push("\nNotes:");
         for (const n of notes) {
-          lines.push(`  ${n.node_id} (${n.note_type}): ${n.content}`);
+          const repo = n.repo_role ? ` [${n.repo_role}]` : "";
+          lines.push(`  ${n.node_id} (${n.note_type})${repo}: ${n.content}`);
         }
       }
 
@@ -242,13 +243,15 @@ export function registerDecisionCommands(program: Command): void {
     .argument("<node-id>", "The node ID from the Mermaid diagram")
     .argument("<content>", "Note content")
     .option("--type <type>", "Note type: node or edge", "node")
-    .action((nodeId: string, content: string, opts: { type: string }) => {
+    .option("--repo <role>", "Repo role that owns this node")
+    .action((nodeId: string, content: string, opts: { type: string; repo?: string }) => {
       const ctx = getCtx(program);
       const resolved = resolveWorkspace(program.opts().workspace);
       const db = getDb(resolved.name);
       const noteType = opts.type === "edge" ? "edge" : "node" as const;
-      const note = upsertArchitectureNote(db, nodeId, noteType, content);
-      outputSuccess(ctx, note, `Note on '${nodeId}': ${content}`);
+      const note = upsertArchitectureNote(db, nodeId, noteType, content, opts.repo);
+      const repoSuffix = note.repo_role ? ` [${note.repo_role}]` : "";
+      outputSuccess(ctx, note, `Note on '${nodeId}'${repoSuffix}: ${content}`);
     });
 
   program

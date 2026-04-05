@@ -109,7 +109,29 @@ td arch note DB "WAL mode, separate decisions.db per repo"
 td arch note Server "Serves static UI build + REST API on same port"
 ```
 
-### Step 6: Summary
+### Step 6: Claim architecture nodes for this repo
+
+If this repo has a role (check `.tendrils/config.toml` for `role = "..."`), link diagram nodes to the repo using `--repo`:
+
+First check existing ownership:
+```bash
+td arch --json
+```
+
+For each node that this repo owns or is primarily responsible for, claim it:
+```bash
+td arch note CLI "Commander CLI entry point" --repo cli
+td arch note Config ".tendrils/config.toml binding" --repo cli
+```
+
+Rules:
+- **Claim nodes your repo implements** — if this repo contains the code for that component, claim it
+- **Don't claim nodes owned by another repo** — if a note already has a different `repo_role`, leave it
+- **Shared infrastructure nodes** (databases, config files) can be left unclaimed (null) or claimed by the repo that manages them
+- **This step is idempotent** — re-running discover just confirms or updates existing ownership
+- **Skip this step** if the repo has no role configured
+
+### Step 7: Summary
 
 After analyzing the codebase, run:
 ```bash
@@ -123,6 +145,7 @@ Present a summary to the user:
   - Architectural decisions (technical choices)
   - Convention decisions (patterns to follow)
 - Whether the architecture diagram was **created** or **updated**
+- How many architecture nodes were **claimed** for this repo (if any)
 - Areas of the codebase that were covered
 
 ## Guidelines
