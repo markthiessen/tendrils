@@ -15,14 +15,23 @@ interface SyncResult {
   reason: string;
 }
 
-function checkPrMerged(prUrl: string): boolean {
+function parsePrRef(ref: string): { repo: string; number: string } | null {
+  const m = ref.match(/^([\w.-]+\/[\w.-]+)#(\d+)$/);
+  return m ? { repo: m[1], number: m[2] } : null;
+}
+
+function checkPrMerged(prRef: string): boolean {
   try {
-    const out = execSync(`gh pr view "${prUrl}" --json merged`, {
+    const parsed = parsePrRef(prRef);
+    const cmd = parsed
+      ? `gh pr view ${parsed.number} --repo "${parsed.repo}" --json state`
+      : `gh pr view "${prRef}" --json state`;
+    const out = execSync(cmd, {
       encoding: "utf-8",
       stdio: ["pipe", "pipe", "pipe"],
     });
-    const data = JSON.parse(out) as { merged: boolean };
-    return data.merged === true;
+    const data = JSON.parse(out) as { state: string };
+    return data.state === "MERGED";
   } catch {
     return false;
   }

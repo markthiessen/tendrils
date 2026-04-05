@@ -116,7 +116,8 @@ export function registerGoalCommand(program: Command): void {
     .command("archive")
     .argument("<id>", "Goal ID (e.g. G01)")
     .option("-s, --summary <text>", "Archive summary")
-    .action(async (idStr: string, opts: { summary?: string }) => {
+    .option("--force", "Archive even if some done tasks are not shipped")
+    .action(async (idStr: string, opts: { summary?: string; force?: boolean }) => {
       const ctx = getCtx(program);
       const db = resolveDb(program);
       const numId = parseGoalNum(idStr);
@@ -129,6 +130,19 @@ export function registerGoalCommand(program: Command): void {
       if (incomplete.length > 0) {
         const ids = incomplete.map((t) => formatTaskId(t.goal_id, t.id)).join(", ");
         throw new ConflictError(`Goal ${idStr} has ${incomplete.length} incomplete task(s): ${ids}`);
+      }
+
+      const doneTasks = tasks.filter((t) => t.status === "done");
+      const unshipped = doneTasks.filter((t) => !t.shipped);
+      if (unshipped.length > 0 && !opts.force) {
+        const lines = unshipped.map((t) => {
+          const id = formatTaskId(t.goal_id, t.id);
+          const pr = t.pr_url ? ` (${t.pr_url})` : "";
+          return `  ${id} ${t.title}${pr}`;
+        });
+        throw new ConflictError(
+          `${idStr} has ${unshipped.length} done task(s) that aren't shipped yet:\n${lines.join("\n")}\n\nRun td sync first, or use --force to archive anyway.`,
+        );
       }
 
       let summary = opts.summary;
