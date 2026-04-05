@@ -2,7 +2,7 @@
 description: Sync task shipped status by checking GitHub PR merge state
 ---
 
-You are syncing the tendrils task map against GitHub to mark merged PRs as shipped. This command checks all done-but-unshipped tasks, queries their linked PRs, and marks shipped any whose PR has been merged.
+You are syncing the tendrils task map against GitHub to mark merged PRs as shipped. This command checks all done-but-unshipped tasks plus any review/in-progress tasks with PR URLs, queries their linked PRs, and marks shipped any whose PR has been merged. Tasks still in review or in-progress are automatically accepted and shipped if their PR has already been merged — this handles the case where a user merges a PR without running td-review first.
 
 **Args:** `$ARGUMENTS`
 
@@ -23,15 +23,17 @@ Parse the JSON output. It returns an array of results, each with:
 - `shortId` — task identifier (e.g., G18.T079)
 - `title` — task title
 - `shipped` — whether it was marked shipped
-- `reason` — why (PR merged, PR not merged, No PR URL)
+- `autoDone` — whether it was automatically transitioned to done (from review or in-progress)
+- `reason` — why (PR merged, PR not merged, No PR URL, or auto-accepted with prior status)
 
 ### Step 2: Report results
 
 Present a clear summary to the user:
 
-1. **Shipped tasks** — list each task that was just marked shipped, with its ID and title
-2. **Not yet shipped** — list tasks whose PRs are still open, with their PR URLs
-3. **Missing PR URL** — list tasks with no PR link (suggest running `td task status <id> --pr <url>` to fix)
+1. **Auto-accepted & shipped** — list tasks that were in review/in-progress but auto-accepted because their PR was already merged
+2. **Shipped tasks** — list done tasks that were just marked shipped, with their ID and title
+3. **Not yet shipped** — list tasks whose PRs are still open, with their PR URLs
+4. **Missing PR URL** — list done tasks with no PR link (suggest running `td task status <id> --pr <url>` to fix)
 
 If nothing was synced (no unshipped done tasks), say so and suggest checking task statuses.
 
