@@ -198,6 +198,8 @@ Common excuses agents use to skip steps — and why they're wrong:
 
 - **"The description is vague so I'll interpret it broadly"** → A vague description means you should clarify scope, not expand it. Ask or check sibling tasks before assuming work belongs in your task. Scope creep is the top cause of rejected reviews.
 
+- **"The task is straightforward so I'll mark it done instead of review"** → In normal mode, you NEVER set status to `done`. Only `review`. The human decides when work is done — that's the entire point of the review step. Skipping it means shipping unreviewed work. Auto mode is the only path to `done`, and it must be explicitly requested.
+
 - **"I already know this codebase well enough"** → Your knowledge is from a previous conversation. Files change between sessions. Read the entry points fresh every time — stale assumptions cause subtle bugs that pass a quick glance but fail in review.
 
 ## Guidelines

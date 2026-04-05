@@ -673,6 +673,20 @@ body {
   border-radius: 3px;
 }
 
+.task-pr {
+  font-size: 10px;
+  color: #58a6ff;
+  background: #334155;
+  padding: 0 4px;
+  border-radius: 3px;
+  text-decoration: none;
+}
+
+.task-pr:hover {
+  color: #79c0ff;
+  background: #3b4f6b;
+}
+
 .task-overflow {
   position: relative;
   margin-left: auto;
