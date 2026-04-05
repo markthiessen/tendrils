@@ -13,6 +13,7 @@ import { registerLogCommands } from "./cli/log.js";
 import { registerMapCommand } from "./cli/map.js";
 import { registerUiCommand } from "./cli/ui.js";
 import { registerDecisionCommands } from "./cli/decision.js";
+import { registerSyncCommand } from "./cli/sync.js";
 import { closeDb } from "./db/index.js";
 
 const program = new Command();
@@ -37,6 +38,7 @@ registerLogCommands(program);
 registerMapCommand(program);
 registerUiCommand(program);
 registerDecisionCommands(program);
+registerSyncCommand(program);
 
 // Error handling
 program.exitOverride();

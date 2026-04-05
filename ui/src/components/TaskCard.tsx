@@ -69,11 +69,7 @@ export function TaskCard({ task, isNew, statusChanged, justDone }: Props) {
       <div className="task-card-header">
         <TaskStatusRing status={task.status} />
         <span className="task-id">{task.shortId}</span>
-        <EditableText
-          value={task.title}
-          onSave={handleTitleChange}
-          className="task-title"
-        />
+        <div className="task-card-header-spacer" />
         <div className="task-overflow" ref={menuRef}>
           <button className="btn-overflow" onClick={() => setShowMenu(!showMenu)}>&#x22EE;</button>
           {showMenu && (
@@ -92,6 +88,11 @@ export function TaskCard({ task, isNew, statusChanged, justDone }: Props) {
           )}
         </div>
       </div>
+      <EditableText
+        value={task.title}
+        onSave={handleTitleChange}
+        className="task-title"
+      />
       {task.description ? (
         showDesc ? (
           <div className="task-desc-expanded">

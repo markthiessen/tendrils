@@ -8,12 +8,16 @@ import {
   deleteTask,
   moveTask,
   reorderTask,
+  shipTask,
 } from "../db/task.js";
+import { insertComment } from "../db/comment.js";
+import { insertLogEntry } from "../db/log.js";
 import {
   addDependency,
   removeDependency,
   findDependencies,
   findDependents,
+  hasUnsatisfiedDependencies,
   wouldCreateCycle,
 } from "../db/dependency.js";
 import { findGoalById } from "../db/goal.js";
@@ -142,6 +146,8 @@ export function registerTaskCommand(program: Command): void {
         ["Estimate", t.estimate ?? "(none)"],
         ["Output", t.output ?? "(none)"],
         ["Proof", t.proof ?? "(none)"],
+        ["PR", t.pr_url ?? "(none)"],
+        ["Shipped", t.shipped ? "🚀 Yes" : "No"],
       ];
 
       if (depLabels.length > 0) {
@@ -386,11 +392,116 @@ export function registerTaskCommand(program: Command): void {
     .option("--reason <text>", "Reason (for blocked status)")
     .option("--output <text>", "Output summary (for done status — what was built)")
     .option("--proof <text>", "Proof of completion (required for review status)")
+    .option("--pr <url>", "PR reference (owner/repo#number or GitHub URL)")
     .option("-a, --agent <name>", "Agent name")
-    .action((idStr: string, newStatus: string, opts: { reason?: string; output?: string; proof?: string; agent?: string }) => {
+    .action((idStr: string, newStatus: string, opts: { reason?: string; output?: string; proof?: string; pr?: string; agent?: string }) => {
       const ctx = getCtx(program);
       const db = resolveDb(program);
-      changeTaskStatus(ctx, db, parseTaskNum(idStr), newStatus, getAgent(opts), opts.reason, opts.output, opts.proof);
+      changeTaskStatus(ctx, db, parseTaskNum(idStr), newStatus, getAgent(opts), opts.reason, opts.output, opts.proof, opts.pr);
+    });
+
+  task
+    .command("ship")
+    .description("Mark a done/cancelled task as shipped (code landed on main)")
+    .argument("<id>", "Task ID")
+    .action((idStr: string) => {
+      const ctx = getCtx(program);
+      const db = resolveDb(program);
+      const taskId = parseTaskNum(idStr);
+      const t = shipTask(db, taskId);
+      const shortId = formatTaskId(t.goal_id, t.id);
+      outputSuccess(ctx, { ...t, shortId }, `🚀 Shipped task ${shortId}.`);
+    });
+
+  task
+    .command("accept")
+    .description("Accept a task in review status (marks it done)")
+    .argument("<id>", "Task ID")
+    .option("-a, --agent <name>", "Agent name")
+    .option("-m, --message <text>", "Approval message", "Approved")
+    .action((idStr: string, opts: { agent?: string; message: string }) => {
+      const ctx = getCtx(program);
+      const db = resolveDb(program);
+      const taskId = parseTaskNum(idStr);
+      const agent = getAgent(opts);
+
+      const result = db.transaction(() => {
+        const task = findTaskById(db, taskId);
+        if (!task) throw new NotFoundError("task", idStr);
+        if (task.status !== "review") {
+          throw new InvalidArgumentError(
+            `Cannot accept task in '${task.status}' status — must be in review`,
+          );
+        }
+
+        db.prepare(
+          "UPDATE tasks SET status = 'done', version = version + 1, updated_at = datetime('now') WHERE id = ?",
+        ).run(taskId);
+
+        insertLogEntry(db, "task", taskId, "Accepted", agent, "review", "done");
+        insertComment(db, taskId, opts.message, "approval", agent);
+
+        return findTaskById(db, taskId)!;
+      })();
+
+      const shortId = formatTaskId(result.goal_id, result.id);
+
+      // Auto-unblock dependents
+      const dependents = findDependents(db, taskId);
+      for (const dep of dependents) {
+        const depTask = findTaskById(db, dep.task_id);
+        if (!depTask || depTask.status !== "blocked") continue;
+        if (hasUnsatisfiedDependencies(db, dep.task_id)) continue;
+
+        db.prepare(
+          `UPDATE tasks SET status = 'ready', blocked_reason = NULL,
+           updated_at = datetime('now') WHERE id = ?`,
+        ).run(dep.task_id);
+
+        const depId = formatTaskId(depTask.goal_id, depTask.id);
+        insertLogEntry(db, "task", dep.task_id, "Auto-unblocked: all dependencies satisfied", agent, "blocked", "ready");
+
+        if (!ctx.quiet) {
+          console.error(`Unblocked ${depId} — all dependencies now done`);
+        }
+      }
+
+      outputSuccess(ctx, { ...result, shortId }, `Accepted task ${shortId}.`);
+    });
+
+  task
+    .command("reject")
+    .description("Reject a task in review status (sends it back to in-progress)")
+    .argument("<id>", "Task ID")
+    .option("-a, --agent <name>", "Agent name")
+    .requiredOption("-m, --message <text>", "Rejection reason (required)")
+    .action((idStr: string, opts: { agent?: string; message: string }) => {
+      const ctx = getCtx(program);
+      const db = resolveDb(program);
+      const taskId = parseTaskNum(idStr);
+      const agent = getAgent(opts);
+
+      const result = db.transaction(() => {
+        const task = findTaskById(db, taskId);
+        if (!task) throw new NotFoundError("task", idStr);
+        if (task.status !== "review") {
+          throw new InvalidArgumentError(
+            `Cannot reject task in '${task.status}' status — must be in review`,
+          );
+        }
+
+        db.prepare(
+          "UPDATE tasks SET status = 'in-progress', version = version + 1, updated_at = datetime('now') WHERE id = ?",
+        ).run(taskId);
+
+        insertLogEntry(db, "task", taskId, `Rejected: ${opts.message}`, agent, "review", "in-progress");
+        insertComment(db, taskId, opts.message, "rejection", agent);
+
+        return findTaskById(db, taskId)!;
+      })();
+
+      const shortId = formatTaskId(result.goal_id, result.id);
+      outputSuccess(ctx, { ...result, shortId }, `Rejected task ${shortId}: ${opts.message}`);
     });
 }
 
