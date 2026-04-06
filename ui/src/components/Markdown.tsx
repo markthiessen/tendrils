@@ -2,7 +2,6 @@ import { useMemo } from "react";
 import { marked } from "marked";
 import DOMPurify from "dompurify";
 
-// Configure marked: open links in new tab
 const renderer = new marked.Renderer();
 const originalLink = renderer.link.bind(renderer);
 renderer.link = function (args) {
