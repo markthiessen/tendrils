@@ -1,5 +1,7 @@
-import type { MapData, TaskTransitions } from "../hooks/useStoryMap";
+import { useState } from "react";
+import type { MapData, TaskData, TaskTransitions } from "../hooks/useStoryMap";
 import { TaskCard } from "./TaskCard";
+import { TaskDetailDialog } from "./TaskDetailDialog";
 import { EditableText } from "./EditableText";
 import { AddForm } from "./AddForm";
 import { ProgressRing } from "./ProgressRing";
@@ -11,6 +13,8 @@ interface Props {
 }
 
 export function StoryMap({ data, transitions }: Props) {
+  const [selectedTask, setSelectedTask] = useState<TaskData | null>(null);
+
   const handleAddGoal = async (title: string) => {
     await post("/api/goals", { title });
   };
@@ -66,6 +70,9 @@ export function StoryMap({ data, transitions }: Props) {
     e.currentTarget.classList.remove("map-cell--dragover");
   };
 
+  // Keep the selected task in sync with live data (SSE updates)
+  const liveSelectedTask = selectedTask ? findTask(selectedTask.id)?.task ?? null : null;
+
   if (data.goals.length === 0) {
     return (
       <div className="empty-state">
@@ -91,14 +98,15 @@ td task status G01.T001 ready`}
       >
         {/* Goal header row */}
         {data.goals.map((g) => {
-          const doneCount = g.tasks.filter((t) => t.status === "done").length;
-          const isComplete = g.tasks.length > 0 && doneCount === g.tasks.length;
+          const activeTasks = g.tasks.filter((t) => t.status !== "cancelled");
+          const doneCount = activeTasks.filter((t) => t.status === "done").length;
+          const isComplete = activeTasks.length > 0 && doneCount === activeTasks.length;
           return (
           <div key={g.id} className={`activity-header${isComplete ? " activity-header--complete" : ""}`}>
             <div className="activity-header-row">
               <ProgressRing
                 done={doneCount}
-                total={g.tasks.length}
+                total={activeTasks.length}
               />
               <span className="activity-id">{g.shortId}</span>
               <EditableText
@@ -117,7 +125,7 @@ td task status G01.T001 ready`}
             <div className="goal-progress-track">
               <div
                 className="goal-progress-fill"
-                style={{ width: g.tasks.length > 0 ? `${(doneCount / g.tasks.length) * 100}%` : "0%" }}
+                style={{ width: activeTasks.length > 0 ? `${(doneCount / activeTasks.length) * 100}%` : "0%" }}
               />
             </div>
           </div>
@@ -145,6 +153,7 @@ td task status G01.T001 ready`}
                   isNew={transitions.newTaskIds.has(task.id)}
                   statusChanged={transitions.statusChangedIds.has(task.id)}
                   justDone={transitions.justDoneIds.has(task.id)}
+                  onClick={() => setSelectedTask(task)}
                 />
               ))}
             </div>
@@ -179,6 +188,7 @@ td task status G01.T001 ready`}
                         isNew={transitions.newTaskIds.has(task.id)}
                         statusChanged={transitions.statusChangedIds.has(task.id)}
                         justDone={transitions.justDoneIds.has(task.id)}
+                        onClick={() => setSelectedTask(task)}
                       />
                     ))
                   ) : null}
@@ -208,6 +218,12 @@ td task status G01.T001 ready`}
           </>
         )}
       </div>
+      {liveSelectedTask && (
+        <TaskDetailDialog
+          task={liveSelectedTask}
+          onClose={() => setSelectedTask(null)}
+        />
+      )}
     </div>
   );
 }
