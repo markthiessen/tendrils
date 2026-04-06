@@ -79,8 +79,8 @@ describe("td next", () => {
     expect(result.data.context.dependents).toHaveLength(1);
     expect(result.data.context.dependents[0].shortId).toBe("G01.T001");
     expect(result.data.context.dependents[0].title).toBe("Email login");
-    expect(result.data.context.dependents[0]).toHaveProperty("description");
-    expect(result.data.context.dependents[0]).toHaveProperty("status");
+    expect(result.data.context.dependents[0].description).toBe("");
+    expect(result.data.context.dependents[0].status).toBe("ready");
   });
 
   it("returns null when nothing ready", () => {

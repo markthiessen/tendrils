@@ -174,7 +174,6 @@ export function assembleContext(
     };
   });
 
-  // 3b. Downstream dependents (tasks that depend on this one)
   const depRows = findDependents(mapDb, task.id);
   const dependents: DependentContext[] = depRows.map((d) => {
     const depTask = findTaskById(mapDb, d.task_id);
