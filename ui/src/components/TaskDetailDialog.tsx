@@ -153,6 +153,14 @@ export function TaskDetailDialog({ task, onClose }: Props) {
           </div>
         )}
 
+        {/* Rationale */}
+        {task.rationale && (
+          <div className="dialog-section">
+            <div className="dialog-section-label">Rationale</div>
+            <Markdown text={task.rationale} className="dialog-description" />
+          </div>
+        )}
+
         {/* Proof */}
         {task.proof && (
           <div className="dialog-section">

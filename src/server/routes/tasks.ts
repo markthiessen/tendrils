@@ -27,18 +27,19 @@ export function registerTaskRoutes(app: FastifyInstance, ctx: ServerContext) {
     });
   });
 
-  app.post<{ Body: { goalId: number; title: string; description?: string; estimate?: string; repo?: string } }>("/api/tasks", (req) => {
+  app.post<{ Body: { goalId: number; title: string; description?: string; estimate?: string; repo?: string; rationale?: string } }>("/api/tasks", (req) => {
     return ctx.withDb((db) => {
       const t = insertTask(db, req.body.goalId, req.body.title, req.body.description ?? "", {
         estimate: req.body.estimate,
         repo: req.body.repo,
+        rationale: req.body.rationale,
       });
       emit("task.created", t);
       return { ok: true, data: t };
     });
   });
 
-  app.put<{ Params: { id: string }; Body: { title?: string; description?: string; estimate?: string | null; repo?: string | null } }>("/api/tasks/:id", (req) => {
+  app.put<{ Params: { id: string }; Body: { title?: string; description?: string; estimate?: string | null; repo?: string | null; rationale?: string | null } }>("/api/tasks/:id", (req) => {
     return ctx.withDb((db) => {
       const t = updateTask(db, Number(req.params.id), req.body);
       if (!t) return { ok: false, error: { code: "NOT_FOUND", message: "Task not found" } };

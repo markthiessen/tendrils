@@ -17,6 +17,7 @@ export interface TaskData {
   estimate: string | null;
   repo: string | null;
   proof: string | null;
+  rationale: string | null;
   pr_url: string | null;
   shipped: boolean;
   shortId: string;

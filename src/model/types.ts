@@ -36,6 +36,7 @@ export interface Task {
   output: string | null;
   pr_url: string | null;
   proof: string | null;
+  rationale: string | null;
   shipped: boolean;
   version: number;
   created_at: string;

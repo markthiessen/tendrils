@@ -43,11 +43,12 @@ export function registerTaskCommand(program: Command): void {
     .option("-d, --desc <text>", "Description", "")
     .option("-e, --estimate <size>", "Estimate (XS, S, M, L, XL)")
     .option("-r, --repo <name>", "Repo/role this task belongs to")
+    .option("--rationale <text>", "Why this task boundary was drawn")
     .action(
       (
         goalIdStr: string,
         title: string,
-        opts: { desc: string; estimate?: string; repo?: string },
+        opts: { desc: string; estimate?: string; repo?: string; rationale?: string },
       ) => {
         const ctx = getCtx(program);
         const db = resolveDb(program);
@@ -58,6 +59,7 @@ export function registerTaskCommand(program: Command): void {
         const t = insertTask(db, goalId, title, opts.desc, {
           estimate: opts.estimate,
           repo: opts.repo,
+          rationale: opts.rationale,
         });
         const id = formatTaskId(goalId, t.id);
         outputSuccess(ctx, { ...t, shortId: id }, `Created task ${id}: ${t.title}`);
@@ -140,6 +142,7 @@ export function registerTaskCommand(program: Command): void {
         ["Goal", formatGoalId(t.goal_id)],
         ["Title", t.title],
         ["Description", t.description || "(none)"],
+        ["Rationale", t.rationale ?? "(none)"],
         ["Status", t.status],
         ["Claimed By", t.claimed_by ?? "(none)"],
         ["Repo", t.repo ?? "(none)"],
@@ -177,10 +180,11 @@ export function registerTaskCommand(program: Command): void {
     .option("-e, --estimate <size>", "New estimate")
     .option("-r, --repo <name>", "Repo/role this task belongs to")
     .option("--pr <url>", "PR reference (owner/repo#number or GitHub URL)")
+    .option("--rationale <text>", "Why this task boundary was drawn")
     .action(
       (
         idStr: string,
-        opts: { title?: string; desc?: string; estimate?: string; repo?: string; pr?: string },
+        opts: { title?: string; desc?: string; estimate?: string; repo?: string; pr?: string; rationale?: string },
       ) => {
         const ctx = getCtx(program);
         const db = resolveDb(program);
@@ -192,6 +196,7 @@ export function registerTaskCommand(program: Command): void {
           estimate: opts.estimate,
           repo: opts.repo,
           pr_url: opts.pr ? normalizePrRef(opts.pr) : undefined,
+          rationale: opts.rationale,
         });
         if (!t) throw new NotFoundError("task", idStr);
         const shortId = formatTaskId(t.goal_id, t.id);

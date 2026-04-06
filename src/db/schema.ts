@@ -420,6 +420,13 @@ INSERT OR IGNORE INTO schema_version (version) VALUES (18);
 COMMIT;
 `;
 
+export const SCHEMA_V19 = `
+BEGIN;
+ALTER TABLE tasks ADD COLUMN rationale TEXT;
+INSERT OR IGNORE INTO schema_version (version) VALUES (19);
+COMMIT;
+`;
+
 // Per-repo decisions database schema (lives at ~/.tendrils/repos/<hash>/decisions.db)
 export const DECISIONS_SCHEMA_V1 = `
 PRAGMA foreign_keys = ON;

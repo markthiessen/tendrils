@@ -7,7 +7,7 @@ export function insertTask(
   goalId: number,
   title: string,
   description: string,
-  opts?: { estimate?: string; repo?: string },
+  opts?: { estimate?: string; repo?: string; rationale?: string },
 ): Task {
   const maxSeq = db
     .prepare(
@@ -18,10 +18,10 @@ export function insertTask(
 
   const result = db
     .prepare(
-      `INSERT INTO tasks (goal_id, seq, title, description, estimate, repo)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO tasks (goal_id, seq, title, description, estimate, repo, rationale)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
     )
-    .run(goalId, seq, title, description, opts?.estimate ?? null, opts?.repo ?? null);
+    .run(goalId, seq, title, description, opts?.estimate ?? null, opts?.repo ?? null, opts?.rationale ?? null);
 
   return findTaskById(db, result.lastInsertRowid as number)!;
 }
@@ -81,6 +81,7 @@ export function updateTask(
     estimate?: string | null;
     repo?: string | null;
     pr_url?: string | null;
+    rationale?: string | null;
   },
 ): Task | undefined {
   const sets: string[] = [];
@@ -105,6 +106,10 @@ export function updateTask(
   if (fields.pr_url !== undefined) {
     sets.push("pr_url = ?");
     values.push(fields.pr_url);
+  }
+  if (fields.rationale !== undefined) {
+    sets.push("rationale = ?");
+    values.push(fields.rationale);
   }
   if (sets.length === 0) return findTaskById(db, id);
 
