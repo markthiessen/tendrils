@@ -9,11 +9,13 @@ interface Props {
   isNew?: boolean;
   statusChanged?: boolean;
   justDone?: boolean;
+  onClick?: () => void;
 }
 
-export function TaskCard({ task, isNew, statusChanged, justDone }: Props) {
+export function TaskCard({ task, isNew, statusChanged, justDone, onClick }: Props) {
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const didDrag = useRef(false);
 
   useEffect(() => {
     if (!showMenu) return;
@@ -50,12 +52,15 @@ export function TaskCard({ task, isNew, statusChanged, justDone }: Props) {
     <div
       className={classes}
       draggable
+      onClick={() => { if (!didDrag.current && onClick) onClick(); }}
       onDragStart={(e) => {
+        didDrag.current = true;
         e.dataTransfer.setData("taskId", String(task.id));
         e.currentTarget.classList.add("task-card--dragging");
       }}
       onDragEnd={(e) => {
         e.currentTarget.classList.remove("task-card--dragging");
+        setTimeout(() => { didDrag.current = false; }, 0);
       }}
     >
       {justDone && <span className="task-card-checkmark">&#10003;</span>}
@@ -65,7 +70,7 @@ export function TaskCard({ task, isNew, statusChanged, justDone }: Props) {
         {task.proof && <span className="task-proof-badge" title="Proof attached">&#x2713;</span>}
         <div className="task-card-header-spacer" />
         <div className="task-overflow" ref={menuRef}>
-          <button className="btn-overflow" onClick={() => setShowMenu(!showMenu)}>&#x22EE;</button>
+          <button className="btn-overflow" onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}>&#x22EE;</button>
           {showMenu && (
             <div className="overflow-menu">
               {task.status === "backlog" && (
