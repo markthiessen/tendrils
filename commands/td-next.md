@@ -97,7 +97,7 @@ Implement only what this task scopes. As you work:
 - If there is rejection feedback, address those issues **first**
 - Write tests alongside implementation, not after — if Done-when mentions tests, they ship with the code
 - Follow relevant architectural decisions from the context bundle
-- Make incremental commits as you go
+- Make incremental commits as you go — do **not** add `Co-Authored-By` or other agent attribution to commit messages
 - Log progress: `td log <id> "Completed X" --agent claude`
 
 ### Step 6: Verify
