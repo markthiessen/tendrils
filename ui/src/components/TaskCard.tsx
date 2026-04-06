@@ -1,8 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import type { TaskData } from "../hooks/useStoryMap";
 import { TaskStatusRing } from "./TaskStatusRing";
-import { EditableText } from "./EditableText";
-import { put, del, post } from "../api/client";
+import { del, post } from "../api/client";
 
 interface Props {
   task: TaskData;
@@ -27,10 +26,6 @@ export function TaskCard({ task, isNew, statusChanged, justDone, onClick }: Prop
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, [showMenu]);
-
-  const handleTitleChange = async (title: string) => {
-    await put(`/api/tasks/${task.id}`, { title });
-  };
 
   const handleStatusChange = async (newStatus: string) => {
     await post(`/api/tasks/${task.id}/status`, { status: newStatus });
@@ -84,11 +79,7 @@ export function TaskCard({ task, isNew, statusChanged, justDone, onClick }: Prop
           )}
         </div>
       </div>
-      <EditableText
-        value={task.title}
-        onSave={handleTitleChange}
-        className="task-title"
-      />
+      <span className="task-title">{task.title}</span>
       {task.claimed_by && (
         <div className="task-claimed">
           {(task.status === "claimed" || task.status === "in-progress") && (
