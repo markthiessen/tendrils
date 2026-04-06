@@ -552,10 +552,13 @@ body {
   flex: 1;
 }
 
-.task-id {
-  font-family: monospace;
+.task-proof-badge {
   font-size: 12px;
-  color: #64748b;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.15);
+  padding: 0 5px;
+  border-radius: 3px;
+  line-height: 1.4;
 }
 
 .task-title {

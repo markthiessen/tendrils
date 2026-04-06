@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from "react";
 import type { TaskData } from "../hooks/useStoryMap";
 import { TaskStatusRing } from "./TaskStatusRing";
 import { EditableText } from "./EditableText";
-import { TaskComments } from "./TaskComments";
 import { put, del, post } from "../api/client";
 
 interface Props {
@@ -13,10 +12,7 @@ interface Props {
 }
 
 export function TaskCard({ task, isNew, statusChanged, justDone }: Props) {
-  const [showComments, setShowComments] = useState(false);
-  const [showDesc, setShowDesc] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
-  const [showProof, setShowProof] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -29,12 +25,9 @@ export function TaskCard({ task, isNew, statusChanged, justDone }: Props) {
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, [showMenu]);
+
   const handleTitleChange = async (title: string) => {
     await put(`/api/tasks/${task.id}`, { title });
-  };
-
-  const handleDescChange = async (description: string) => {
-    await put(`/api/tasks/${task.id}`, { description });
   };
 
   const handleStatusChange = async (newStatus: string) => {
@@ -69,6 +62,7 @@ export function TaskCard({ task, isNew, statusChanged, justDone }: Props) {
       <div className="task-card-header">
         <TaskStatusRing status={task.status} shipped={task.shipped} />
         <span className="task-id">{task.shortId}</span>
+        {task.proof && <span className="task-proof-badge" title="Proof attached">&#x2713;</span>}
         <div className="task-card-header-spacer" />
         <div className="task-overflow" ref={menuRef}>
           <button className="btn-overflow" onClick={() => setShowMenu(!showMenu)}>&#x22EE;</button>
@@ -80,9 +74,6 @@ export function TaskCard({ task, isNew, statusChanged, justDone }: Props) {
               {task.status === "done" && (
                 <button onClick={() => { handleStatusChange("ready"); setShowMenu(false); }}>Reopen</button>
               )}
-              <button onClick={() => { setShowComments(!showComments); setShowMenu(false); }}>
-                {showComments ? "Hide comments" : "Comments"}
-              </button>
               <button className="overflow-menu-danger" onClick={() => { handleDelete(); setShowMenu(false); }}>Remove</button>
             </div>
           )}
@@ -93,24 +84,6 @@ export function TaskCard({ task, isNew, statusChanged, justDone }: Props) {
         onSave={handleTitleChange}
         className="task-title"
       />
-      {task.description ? (
-        showDesc ? (
-          <div className="task-desc-expanded">
-            <button className="task-desc-toggle" onClick={() => setShowDesc(false)}>
-              &#x25BE;
-            </button>
-            <EditableText
-              value={task.description}
-              onSave={handleDescChange}
-              className="task-desc"
-            />
-          </div>
-        ) : (
-          <button className="task-desc-toggle" onClick={() => setShowDesc(true)}>
-            &#x25B8; {task.description.length > 40 ? task.description.slice(0, 40) + "…" : task.description}
-          </button>
-        )
-      ) : null}
       {task.claimed_by && (
         <div className="task-claimed">
           {(task.status === "claimed" || task.status === "in-progress") && (
@@ -119,21 +92,8 @@ export function TaskCard({ task, isNew, statusChanged, justDone }: Props) {
           @{task.claimed_by}
         </div>
       )}
-      {task.proof && (task.status === "review" || task.status === "done") && (
-        showProof ? (
-          <div className="task-proof">
-            <button className="task-proof-label" onClick={() => setShowProof(false)}>&#x25BE; Proof</button>
-            <div className="task-proof-text">{task.proof}</div>
-          </div>
-        ) : (
-          <button className="task-proof-toggle" onClick={() => setShowProof(true)}>
-            &#x25B8; Proof
-          </button>
-        )
-      )}
-      {(task.estimate || task.repo || task.pr_url) && (
+      {(task.repo || task.pr_url) && (
         <div className="task-meta">
-          {task.estimate && <span className="task-estimate">{task.estimate}</span>}
           {task.repo && <span className="task-repo">{task.repo}</span>}
           {task.pr_url && (
             <a
@@ -150,7 +110,6 @@ export function TaskCard({ task, isNew, statusChanged, justDone }: Props) {
           )}
         </div>
       )}
-      <TaskComments taskId={task.id} visible={showComments} />
     </div>
   );
 }
