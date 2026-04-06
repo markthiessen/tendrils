@@ -1,8 +1,8 @@
 ---
-description: Commit uncommitted work and create a PR from the current branch
+description: Commit uncommitted work and create or update a PR from the current branch
 ---
 
-You are submitting work from the current branch as a pull request. This command commits any uncommitted changes (with NO agent attribution), pushes the branch, creates a PR, and links related tasks to it.
+You are submitting work from the current branch as a pull request. This command commits any uncommitted changes (with NO agent attribution), pushes the branch, creates or updates a PR, and links related tasks to it.
 
 **Args:** `$ARGUMENTS`
 
@@ -11,6 +11,7 @@ You are submitting work from the current branch as a pull request. This command 
 !`git branch --show-current 2>/dev/null`
 !`git status --short 2>/dev/null`
 !`git log main.. --oneline 2>/dev/null || echo "No commits ahead of main."`
+!`gh pr view --json url,title,body 2>/dev/null || echo "NO_EXISTING_PR"`
 
 ## Related tasks
 
@@ -62,32 +63,45 @@ If no template exists, use this default format for the PR body:
 <list of key files modified and why>
 ```
 
-### Step 4: Push and create PR
+### Step 4: Push and create or update PR
 
 1. Push the branch:
    ```bash
    git push -u origin HEAD
    ```
 
-2. Derive a PR title from the branch name or the work done — keep it under 70 characters.
+2. Check the current state above for the `gh pr view` output. If a PR already exists for this branch, **update** it. If not, **create** one.
 
-3. Create the PR:
+**If no existing PR:**
+
+3. Derive a PR title from the branch name or the work done — keep it under 70 characters.
+4. Create the PR:
    ```bash
    gh pr create --title "<title>" --body "<body from Step 3>"
    ```
+5. Capture the PR URL from the output.
 
-4. Capture the PR URL from the output.
+**If a PR already exists:**
+
+3. Capture the PR URL from the `gh pr view` output.
+4. Regenerate the PR body using the template/format from Step 3, incorporating any new commits.
+5. Update the PR description:
+   ```bash
+   gh pr edit <pr_url> --body "<updated body from Step 3>"
+   ```
 
 ### Step 5: Link tasks to PR
 
-Find all tasks from this work session that should be linked — tasks with status `in-progress`, `review`, or `done` that were worked on in the current branch. Use the task list above to identify them.
+From the task list above, find **every** task whose `pr_url` is empty/null **and** whose status is one of: `claimed`, `in-progress`, `review`, or `done`. These are the tasks that need the PR attached.
 
-For each related task:
+For **each** matching task, run:
 ```bash
-td task status <id> --pr <pr_url> --agent claude
+td task status <id> <current-status> --pr <pr_url> --agent claude
 ```
 
-Report which tasks were linked.
+Use the task's **current** status as `<current-status>` so the command is a no-op status change that only attaches the PR.
+
+Report which tasks were linked and which (if any) already had a PR.
 
 ### Step 6: Summary
 
@@ -101,18 +115,20 @@ Show the user:
 
 ## Rationalizations
 
+- **"A PR already exists, so there's nothing to do"** — Wrong. Push new commits, update the PR description to reflect all changes, and make sure the PR URL is linked on every related task.
+
 - **"There's nothing to commit, so I'll skip straight to the PR"** — Check first. Uncommitted changes are easy to miss in the status output. Always verify before skipping Step 2.
 
 - **"I'll add Co-Authored-By since Claude helped"** — No. The task explicitly forbids agent attribution in commits. The PR itself provides the audit trail.
 
 - **"The PR template doesn't fit this change"** — Fill in every section anyway. Templates exist for reviewer consistency. Mark sections as "N/A" if truly not applicable, but don't skip them.
 
-- **"I'll just link the current task"** — Check for all related tasks from the session. Multiple tasks often land in a single PR. Missing a link breaks the PR-aware lifecycle.
+- **"I'll just link the current task"** — Check for ALL tasks with an active status (`claimed`, `in-progress`, `review`, `done`) that don't already have a `pr_url`. Multiple tasks often land in a single PR. Missing a link breaks the PR-aware lifecycle.
 
 ## Guidelines
 
 - **Never commit on main** — refuse and explain why
 - **No agent attribution in commits** — no Co-Authored-By, no Signed-off-by, no bot signatures
-- **Always push before creating the PR** — `gh pr create` needs the remote branch to exist
+- **Always push before creating or updating the PR** — `gh pr create` needs the remote branch; `gh pr edit` needs the latest commits pushed
 - **Use the repo's PR template if it exists** — don't invent your own format when one is provided
-- **Link all related tasks** — not just the one you picked up, but any in-progress/review/done tasks from this branch
+- **Link all related tasks** — any task with status claimed/in-progress/review/done and no existing `pr_url` gets linked
