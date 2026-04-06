@@ -4,6 +4,7 @@ import { TaskStatusRing } from "./TaskStatusRing";
 import { EditableText } from "./EditableText";
 import { StatusBadge } from "./StatusBadge";
 import { TaskComments } from "./TaskComments";
+import { Markdown } from "./Markdown";
 import { put, post, del } from "../api/client";
 
 interface Props {
@@ -148,7 +149,7 @@ export function TaskDetailDialog({ task, onClose }: Props) {
         {task.description && (
           <div className="dialog-section">
             <div className="dialog-section-label">Description</div>
-            <div className="dialog-description">{task.description}</div>
+            <Markdown text={task.description} className="dialog-description" />
           </div>
         )}
 
@@ -158,7 +159,7 @@ export function TaskDetailDialog({ task, onClose }: Props) {
             <div className="dialog-section-label">
               Proof <span className="task-proof-badge">&#x2713;</span>
             </div>
-            <div className="dialog-proof">{task.proof}</div>
+            <Markdown text={task.proof} className="dialog-proof" />
           </div>
         )}
 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { get, post, type Envelope } from "../api/client";
+import { Markdown } from "./Markdown";
 
 interface Comment {
   id: number;
@@ -58,7 +59,7 @@ export function TaskComments({ taskId, visible }: Props) {
             </span>
             <span className="task-comment-time">{c.created_at}</span>
           </div>
-          <div className="task-comment-message">{c.message}</div>
+          <Markdown text={c.message} className="task-comment-message" />
         </div>
       ))}
       <form className="task-comment-form" onSubmit={handleSubmit}>
