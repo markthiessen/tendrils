@@ -68,6 +68,21 @@ describe("td next", () => {
     expect(result.data.shortId).toBe("G01.T001");
   });
 
+  it("includes dependents in context bundle", () => {
+    // T001 depends on T002, so T002 has T001 as a dependent
+    td(["task", "depends", "G01.T001", "--on", "G01.T002"]);
+    // T001 is now blocked (unsatisfied dep on T002). T002 is still ready.
+    const result = tdJson(["next", "--context"]);
+    expect(result.ok).toBe(true);
+    // T002 should be next (T001 is blocked)
+    expect(result.data.shortId).toBe("G01.T002");
+    expect(result.data.context.dependents).toHaveLength(1);
+    expect(result.data.context.dependents[0].shortId).toBe("G01.T001");
+    expect(result.data.context.dependents[0].title).toBe("Email login");
+    expect(result.data.context.dependents[0]).toHaveProperty("description");
+    expect(result.data.context.dependents[0]).toHaveProperty("status");
+  });
+
   it("returns null when nothing ready", () => {
     td(["task", "status", "G01.T001", "claimed"]);
     td(["task", "status", "G01.T002", "claimed"]);

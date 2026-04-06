@@ -3,7 +3,7 @@ import type { Task, Decision } from "./types.js";
 import { findTaskById, findAllTasks } from "../db/task.js";
 import { findGoalById } from "../db/goal.js";
 import { findAllRepos } from "../db/repo.js";
-import { findDependencies } from "../db/dependency.js";
+import { findDependencies, findDependents } from "../db/dependency.js";
 import { findCommentsByTask } from "../db/comment.js";
 import { findAllArchitectureNotes, type ArchitectureNote } from "../db/architecture.js";
 import { formatTaskId } from "./id.js";
@@ -34,6 +34,7 @@ export interface ContextBundle {
   architecture_notes: ArchitectureNote[];
   relevant_nodes: string[];
   dependencies: DependencyContext[];
+  dependents: DependentContext[];
   feedback: FeedbackEntry[];
 }
 
@@ -42,6 +43,13 @@ export interface DependencyContext {
   title: string;
   status: string;
   output: string | null;
+}
+
+export interface DependentContext {
+  shortId: string;
+  title: string;
+  status: string;
+  description: string;
 }
 
 export interface FeedbackEntry {
@@ -166,6 +174,18 @@ export function assembleContext(
     };
   });
 
+  // 3b. Downstream dependents (tasks that depend on this one)
+  const depRows = findDependents(mapDb, task.id);
+  const dependents: DependentContext[] = depRows.map((d) => {
+    const depTask = findTaskById(mapDb, d.task_id);
+    return {
+      shortId: depTask ? formatTaskId(depTask.goal_id, depTask.id) : `T${d.task_id}`,
+      title: depTask?.title ?? "(unknown)",
+      status: depTask?.status ?? "(unknown)",
+      description: depTask?.description ?? "",
+    };
+  });
+
   // 4. Rejection feedback from prior attempts (rejection comments on this task)
   const comments = findCommentsByTask(mapDb, task.id);
   const feedback: FeedbackEntry[] = comments
@@ -176,5 +196,5 @@ export function assembleContext(
       created_at: c.created_at,
     }));
 
-  return { goal, siblings, decisions, all_decision_count, architecture, architecture_notes, relevant_nodes, dependencies, feedback };
+  return { goal, siblings, decisions, all_decision_count, architecture, architecture_notes, relevant_nodes, dependencies, dependents, feedback };
 }
