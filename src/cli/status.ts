@@ -246,8 +246,18 @@ export function changeTaskStatus(
   const task = findTaskById(db, taskId);
   if (!task) throw new NotFoundError("task", `T${taskId}`);
 
-  // Idempotent
+  // Idempotent — but still apply PR link if provided
   if (task.status === newStatus) {
+    if (prUrl) {
+      const normalizedPr = normalizePrRef(prUrl);
+      db.prepare(
+        `UPDATE tasks SET pr_url = ?, updated_at = datetime('now') WHERE id = ?`,
+      ).run(normalizedPr, taskId);
+      const updated = findTaskById(db, taskId)!;
+      const shortId = formatTaskId(updated.goal_id, updated.id);
+      outputSuccess(ctx, { ...updated, shortId }, `Task ${shortId} is already '${newStatus}'; linked PR ${normalizedPr}.`);
+      return;
+    }
     const shortId = formatTaskId(task.goal_id, task.id);
     outputSuccess(ctx, { ...task, shortId }, `Task ${shortId} is already '${newStatus}'.`);
     return;

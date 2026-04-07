@@ -47,6 +47,11 @@ If a next item was found:
 
 ### Step 3: Claim the work
 
+**Never commit directly to main.** Before starting, check the current branch. If you are on `main`, create a feature branch first:
+```bash
+git checkout -b <task-id-slug>   # e.g. g21-t086-contract-artifacts
+```
+
 In **normal mode**: ask the user to confirm before claiming.
 
 In **auto mode**: claim immediately without asking.
@@ -183,6 +188,8 @@ Common excuses agents use to skip steps — and why they're wrong:
 - **"The description is vague so I'll interpret it broadly"** → A vague description means you should clarify scope, not expand it. Ask or check sibling tasks before assuming work belongs in your task. Scope creep is the top cause of rejected reviews.
 
 - **"The task is straightforward so I'll mark it done instead of review"** → In normal mode, you NEVER set status to `done`. Only `review`. The human decides when work is done — that's the entire point of the review step. Skipping it means shipping unreviewed work. Auto mode is the only path to `done`, and it must be explicitly requested.
+
+- **"I'm already on main and it's just a small change"** → Never commit to main. Every task gets its own branch — no exceptions. Committing to main bypasses review, blocks `/td-submit` from creating a clean PR, and makes it impossible to revert a single task's work without collateral damage. Create the branch before your first commit.
 
 - **"I already know this codebase well enough"** → Your knowledge is from a previous conversation. Files change between sessions. Read the entry points fresh every time — stale assumptions cause subtle bugs that pass a quick glance but fail in review.
 
