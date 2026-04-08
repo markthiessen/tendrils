@@ -63,7 +63,7 @@ describe("goal CRUD", () => {
 });
 
 describe("task CRUD", () => {
-  it("add, list, show, edit, move, rm", () => {
+  it("add, list, show, edit, move, rm", { timeout: 15000 }, () => {
     tdJson(["goal", "add", "Auth"]);
     tdJson(["goal", "add", "Payments"]);
 

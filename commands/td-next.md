@@ -47,7 +47,7 @@ If a next item was found:
 
 ### Step 3: Claim the work
 
-**Never commit directly to main.** Before starting, check the current branch. If you are on `main`, create a feature branch first:
+**Always work on a feature branch, never main.** Before starting, check the current branch. If you are on `main`, create a feature branch first:
 ```bash
 git checkout -b <task-id-slug>   # e.g. g21-t086-contract-artifacts
 ```
@@ -102,7 +102,7 @@ Implement only what this task scopes. As you work:
 - If there is rejection feedback, address those issues **first**
 - Write tests alongside implementation, not after — if Done-when mentions tests, they ship with the code
 - Follow relevant architectural decisions from the context bundle
-- Make incremental commits as you go — do **not** add `Co-Authored-By` or other agent attribution to commit messages
+- **Do not commit.** Leave changes uncommitted — the user will commit and submit via `/td-submit` when ready
 - Log progress: `td log <id> "Completed X" --agent claude`
 
 ### Step 6: Verify
@@ -189,7 +189,9 @@ Common excuses agents use to skip steps — and why they're wrong:
 
 - **"The task is straightforward so I'll mark it done instead of review"** → In normal mode, you NEVER set status to `done`. Only `review`. The human decides when work is done — that's the entire point of the review step. Skipping it means shipping unreviewed work. Auto mode is the only path to `done`, and it must be explicitly requested.
 
-- **"I'm already on main and it's just a small change"** → Never commit to main. Every task gets its own branch — no exceptions. Committing to main bypasses review, blocks `/td-submit` from creating a clean PR, and makes it impossible to revert a single task's work without collateral damage. Create the branch before your first commit.
+- **"I'm already on main and it's just a small change"** → Always work on a feature branch — no exceptions. Working on main bypasses review, blocks `/td-submit` from creating a clean PR, and makes it impossible to revert a single task's work without collateral damage. Create the branch before you start.
+
+- **"I'll commit as I go to save progress"** → Do not commit. Leave changes uncommitted. The user controls when and how work is committed — that's what `/td-submit` is for. Committing steals that choice and can produce a messy history the user didn't want.
 
 - **"I already know this codebase well enough"** → Your knowledge is from a previous conversation. Files change between sessions. Read the entry points fresh every time — stale assumptions cause subtle bugs that pass a quick glance but fail in review.
 
