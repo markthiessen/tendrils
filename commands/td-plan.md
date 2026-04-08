@@ -115,6 +115,8 @@ td map
 
 Show the updated map and ask if anything needs adjusting.
 
+**STOP HERE. Do not begin implementing any tasks. Planning and implementation are separate steps — your job ends when the map is reviewed. Even if the user confirms the plan looks good, do not start building unless they explicitly ask you to implement or pick up a task (e.g. via `/td-next`).**
+
 ## Guidelines
 
 - **Build on conversation context** — if a plan was already discussed, don't restart from scratch

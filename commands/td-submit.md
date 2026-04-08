@@ -105,8 +105,8 @@ Report which tasks were linked and which (if any) already had a PR.
 
 ### Step 6: Summary
 
-Show the user:
-- The PR URL
+**Always end by displaying the PR URL as a clickable link — this is the most important output of the command.** Show the user:
+- **The PR URL** (e.g. `https://github.com/owner/repo/pull/123`) — always print this, whether the PR was just created or already existed
 - Which tasks were linked
 - The current map:
   ```bash
