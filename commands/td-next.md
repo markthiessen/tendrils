@@ -47,10 +47,13 @@ If a next item was found:
 
 ### Step 3: Claim the work
 
-**Always work on a feature branch, never main.** Before starting, check the current branch. If you are on `main`, create a feature branch first:
+Check the current branch:
 ```bash
-git checkout -b <task-id-slug>   # e.g. g21-t086-contract-artifacts
+git branch --show-current
 ```
+
+- In **normal mode**: tell the user which branch they're on and ask whether to create a new branch or continue working on the current one. **Do not create a branch without explicit confirmation.** The user may have already created a branch for this task or may prefer to work on the current branch.
+- In **auto mode**: if already on a non-main feature branch, use it. If on `main`, create a branch named after the task (e.g., `git checkout -b g21-t086-contract-artifacts`).
 
 In **normal mode**: ask the user to confirm before claiming.
 
@@ -171,7 +174,7 @@ Then show the final map (`td map`) and point out any tasks that may now be unblo
 td log <id> "Done — <brief summary of what was built>" --agent claude
 td task status <id> done --agent claude --output "What was built — key files, endpoints, or components delivered" --proof "<proof from Step 6>"
 ```
-Then run `td next --json` as a live command (not the pre-loaded output above). If another ready task is returned, go back to Step 3 and repeat. If the result is `null` or `data` is empty, stop and report how many tasks were completed. If a task hits a blocker during work, set it to blocked with a reason and stop the loop.
+Then run `td next --context --json` as a live command (not the pre-loaded output above). If another ready task is returned, go back to Step 3 and repeat — **using the fresh context bundle from this call**, not the one at the top of this prompt. Each task's bundle carries its own decisions, dependency outputs, and rejection feedback; reusing a previous task's bundle means implementing against the wrong requirements. If the result is `null` or `data` is empty, stop and report how many tasks were completed. If a task hits a blocker during work, set it to blocked with a reason and stop the loop.
 
 ## Rationalizations
 
@@ -189,7 +192,7 @@ Common excuses agents use to skip steps — and why they're wrong:
 
 - **"The task is straightforward so I'll mark it done instead of review"** → In normal mode, you NEVER set status to `done`. Only `review`. The human decides when work is done — that's the entire point of the review step. Skipping it means shipping unreviewed work. Auto mode is the only path to `done`, and it must be explicitly requested.
 
-- **"I'm already on main and it's just a small change"** → Always work on a feature branch — no exceptions. Working on main bypasses review, blocks `/td-submit` from creating a clean PR, and makes it impossible to revert a single task's work without collateral damage. Create the branch before you start.
+- **"I'm already on main and it's just a small change"** → Never silently create a branch. In normal mode, tell the user where they are and ask what they want. They may already be on the right branch. In auto mode, create a branch only if you're on main.
 
 - **"I'll commit as I go to save progress"** → Do not commit. Leave changes uncommitted. The user controls when and how work is committed — that's what `/td-submit` is for. Committing steals that choice and can produce a messy history the user didn't want.
 

@@ -83,11 +83,15 @@ If no template exists, use this default format for the PR body:
 
 **If a PR already exists:**
 
-3. Capture the PR URL from the `gh pr view` output.
-4. Regenerate the PR body using the template/format from Step 3, incorporating any new commits.
+3. Capture the PR URL and existing body from the `gh pr view` output.
+4. **Do not replace the body wholesale.** Others may have added links, images, review notes, or additional context that must be preserved. Instead:
+   - Read the existing body in full.
+   - Identify sections that match your template (Summary, Changes, etc.) and update those with current information.
+   - Leave all other content untouched — extra sections, appended notes, inline images, links, or reviewer comments.
+   - If the existing body has no recognizable structure, append your updates below the existing content under a clear heading (e.g., `## Latest changes`). Never delete what's already there.
 5. Update the PR description:
    ```bash
-   gh pr edit <pr_url> --body "<updated body from Step 3>"
+   gh pr edit <pr_url> --body "<carefully merged body>"
    ```
 
 ### Step 5: Link tasks to PR
@@ -117,6 +121,8 @@ Report which tasks were linked and which (if any) already had a PR.
 
 - **"A PR already exists, so there's nothing to do"** — Wrong. Push new commits, update the PR description to reflect all changes, and make sure the PR URL is linked on every related task.
 
+- **"The existing PR description is outdated, I'll rewrite it"** — Never. Other people may have added links, images, review context, or notes to the description. Read the full existing body, update only your sections, and leave everything else intact. Overwriting someone else's additions is destructive.
+
 - **"There's nothing to commit, so I'll skip straight to the PR"** — Check first. Uncommitted changes are easy to miss in the status output. Always verify before skipping Step 2.
 
 - **"I'll add Co-Authored-By since Claude helped"** — No. The task explicitly forbids agent attribution in commits. The PR itself provides the audit trail.
@@ -132,3 +138,4 @@ Report which tasks were linked and which (if any) already had a PR.
 - **Always push before creating or updating the PR** — `gh pr create` needs the remote branch; `gh pr edit` needs the latest commits pushed
 - **Use the repo's PR template if it exists** — don't invent your own format when one is provided
 - **Link all related tasks** — any task with status claimed/in-progress/review/done and no existing `pr_url` gets linked
+- **Preserve existing PR descriptions** — when updating an existing PR, never replace the body wholesale; merge updates into recognized sections and leave everything else untouched
