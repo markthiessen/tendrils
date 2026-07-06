@@ -41,7 +41,7 @@ td claude status         # Check what's installed
 td claude uninstall      # Remove commands
 ```
 
-This installs slash commands that drive the full workflow from inside Claude Code: `/td-discover`, `/td-plan`, `/td-next`, `/td-status`, `/td-refine`, `/td-review`, `/td-submit`, `/td-archive`, and `/td-sync`.
+This installs slash commands that drive the full workflow from inside Claude Code: `/td-discover`, `/td-plan`, `/td-next`, `/td-status`, `/td-refine`, `/td-submit`, `/td-review`, `/td-archive`, and `/td-sync`.
 
 ### 3. Discover the codebase
 
@@ -96,13 +96,13 @@ Use `/td-status` at any point to see the current map, progress, and recent activ
   → Creates G01 with tasks for login, signup, OAuth
 
 /td-next
-  → Claims G01.T001, implements login endpoint, submits for review
-
-/td-review
-  → Checks the diff, accepts or rejects with feedback
+  → Claims G01.T001, implements login endpoint, marks it for review
 
 /td-submit
   → Commits, pushes, creates PR
+
+/td-review
+  → Checks the PR diff, accepts or rejects with feedback
 
 /td-sync
   → Marks shipped after PR merges
