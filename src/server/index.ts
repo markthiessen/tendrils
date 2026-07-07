@@ -8,6 +8,7 @@ import { createContext } from "./context.js";
 import { emit } from "./sse.js";
 import { markDisconnectedAndRelease } from "../db/agent.js";
 import { insertLogEntry } from "../db/log.js";
+import { loadWorkspaceConfig } from "../config/index.js";
 import { registerGoalRoutes } from "./routes/goals.js";
 import { registerTaskRoutes } from "./routes/tasks.js";
 import { registerWorkflowRoutes } from "./routes/workflow.js";
@@ -100,7 +101,9 @@ export async function createServer(name: string, port: number) {
   const sweepInterval = setInterval(() => {
     try {
       ctx.withDb((db) => {
-        const stale = markDisconnectedAndRelease(db);
+        const lease =
+          loadWorkspaceConfig(ctx.name)?.workspace?.claim_lease_seconds ?? 300;
+        const stale = markDisconnectedAndRelease(db, lease);
         for (const s of stale) {
           if (s.task_id) {
             insertLogEntry(db, "task", s.task_id, `Auto-released: agent '${s.agent_name}' disconnected (stale heartbeat)`, undefined, "in-progress", "ready");

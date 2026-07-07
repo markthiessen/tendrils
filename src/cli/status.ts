@@ -88,20 +88,23 @@ export function registerWorkflowCommands(program: Command): void {
       const db = getDb(resolved.name);
       const repo = opts.repo ?? resolved.role;
 
+      // Load workspace config once for lease + concurrency settings.
+      const wsConfig = loadWorkspaceConfig(resolved.name);
+      const lease = wsConfig?.workspace?.claim_lease_seconds ?? 300;
+
       // Sweep stale sessions and release their claims before picking next task
-      const stale = markDisconnectedAndRelease(db);
+      const stale = markDisconnectedAndRelease(db, lease);
       for (const s of stale) {
         const agent = s.agent_name;
         if (s.task_id) {
           insertLogEntry(db, "task", s.task_id, `Auto-released: agent '${agent}' disconnected (stale heartbeat)`, undefined, "in-progress", "ready");
         }
         if (!ctx.quiet) {
-          console.error(`Released stale claim by '${agent}' (no heartbeat for 5min)`);
+          console.error(`Released stale claim by '${agent}' (no heartbeat for ${lease}s)`);
         }
       }
 
       // Check agent concurrency limits
-      const wsConfig = loadWorkspaceConfig(resolved.name);
       const maxAgents = wsConfig?.workspace?.max_agents_per_repo ?? 0;
       const excludeRepos = maxAgents > 0 ? busyRepos(db, maxAgents) : undefined;
 
