@@ -18,7 +18,7 @@ import { parseId } from "../model/id.js";
 import { NotFoundError } from "../errors.js";
 import {
   outputSuccess,
-  renderTable,
+  pickRowRenderer,
 } from "../output/index.js";
 import { getCtx } from "./util.js";
 
@@ -84,8 +84,10 @@ export function registerDecisionCommands(program: Command): void {
     .option("-t, --tag <tag>", "Filter by tag")
     .option("-r, --repo <path>", "Show decisions from another repo")
     .option("-a, --all", "Show decisions from all workspace repos")
-    .action((opts: { tag?: string; repo?: string; all?: boolean }) => {
+    .option("-f, --format <format>", "Output format: table (default) or md")
+    .action((opts: { tag?: string; repo?: string; all?: boolean; format?: string }) => {
       const ctx = getCtx(program);
+      const md = opts.format === "md";
 
       if (opts.all) {
         const resolved = resolveWorkspace(program.opts().workspace);
@@ -105,12 +107,14 @@ export function registerDecisionCommands(program: Command): void {
 
         const lines: string[] = [];
         for (const r of allData) {
-          lines.push(`\n${r.repo}${r.role ? ` (${r.role})` : ""}:`);
+          const heading = `${r.repo}${r.role ? ` (${r.role})` : ""}`;
+          lines.push(md ? `\n## ${heading}` : `\n${heading}:`);
           if (r.decisions.length === 0) {
-            lines.push("  (none)");
+            lines.push(md ? "- (none)" : "  (none)");
           } else {
             for (const d of r.decisions) {
-              lines.push(`  D${d.id}: ${d.title}${d.tags ? ` [${d.tags}]` : ""}`);
+              const tags = d.tags ? ` [${d.tags}]` : "";
+              lines.push(md ? `- D${d.id}: ${d.title}${tags}` : `  D${d.id}: ${d.title}${tags}`);
             }
           }
         }
@@ -144,17 +148,19 @@ export function registerDecisionCommands(program: Command): void {
         d.agent || "-",
         d.created_at.slice(0, 10),
       ]);
+      const render = pickRowRenderer(opts.format);
       outputSuccess(
         ctx,
         decisions,
-        renderTable(["ID", "Decision", "Tags", "Agent", "Date"], rows),
+        render(["ID", "Decision", "Tags", "Agent", "Date"], rows),
       );
     });
 
   program
     .command("repos")
     .description("List repos in this workspace")
-    .action(() => {
+    .option("-f, --format <format>", "Output format: table (default) or md")
+    .action((opts: { format?: string }) => {
       const ctx = getCtx(program);
       const resolved = resolveWorkspace(program.opts().workspace);
       const db = getDb(resolved.name);
@@ -177,10 +183,11 @@ export function registerDecisionCommands(program: Command): void {
         r.role ?? "-",
         r.path,
       ]);
+      const render = pickRowRenderer(opts.format);
       outputSuccess(
         ctx,
         repos,
-        renderTable(["", "Name", "Role", "Path"], rows),
+        render(["", "Name", "Role", "Path"], rows),
       );
     });
 
@@ -192,7 +199,8 @@ export function registerDecisionCommands(program: Command): void {
   arch
     .command("show", { isDefault: true })
     .description("Show the architecture diagram and notes")
-    .action(() => {
+    .option("-f, --format <format>", "Output format: table (default) or md")
+    .action((opts: { format?: string }) => {
       const ctx = getCtx(program);
       const resolved = resolveWorkspace(program.opts().workspace);
       const db = getDb(resolved.name);
@@ -209,16 +217,17 @@ export function registerDecisionCommands(program: Command): void {
         return;
       }
 
+      const md = opts.format === "md";
       const lines: string[] = [];
       lines.push("```mermaid");
       lines.push(archData.mermaid_source);
       lines.push("```");
 
       if (notes.length > 0) {
-        lines.push("\nNotes:");
+        lines.push(md ? "\n### Notes" : "\nNotes:");
         for (const n of notes) {
           const repo = n.repo_role ? ` [${n.repo_role}]` : "";
-          lines.push(`  ${n.node_id} (${n.note_type})${repo}: ${n.content}`);
+          lines.push(`${md ? "- " : "  "}${n.node_id} (${n.note_type})${repo}: ${n.content}`);
         }
       }
 

@@ -14,6 +14,28 @@ export function renderTable(
   return table.toString();
 }
 
+// Compact GitHub-flavored markdown table — far smaller than box-drawing
+// output for prompt injection, since it drops per-row borders and padding.
+export function renderMarkdownTable(
+  headers: string[],
+  rows: string[][],
+): string {
+  const escape = (s: string) =>
+    String(s ?? "").replace(/\|/g, "\\|").replace(/\r?\n/g, " ");
+  const head = `| ${headers.map(escape).join(" | ")} |`;
+  const sep = `| ${headers.map(() => "---").join(" | ")} |`;
+  const body = rows.map((r) => `| ${r.map(escape).join(" | ")} |`);
+  return [head, sep, ...body].join("\n");
+}
+
+// Pick the row renderer for a --format value. Unknown/absent falls back to the
+// box-drawing table so default behavior is unchanged.
+export function pickRowRenderer(
+  format?: string,
+): (headers: string[], rows: string[][]) => string {
+  return format === "md" ? renderMarkdownTable : renderTable;
+}
+
 export function renderKeyValue(
   pairs: [string, string][],
 ): string {
