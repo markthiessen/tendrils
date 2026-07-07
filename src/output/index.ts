@@ -1,7 +1,7 @@
 import { TendrilsError } from "../errors.js";
 import { success, errorEnvelope } from "./json.js";
 
-export { renderTable, renderKeyValue } from "./table.js";
+export { renderTable, renderMarkdownTable, pickRowRenderer, renderKeyValue } from "./table.js";
 export { success, errorEnvelope } from "./json.js";
 
 export interface OutputContext {
