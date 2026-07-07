@@ -198,21 +198,33 @@ export function unclaimTask(
   db: import("../db/compat.js").Database,
   taskId: number,
 ): void {
-  const task = findTaskById(db, taskId);
-  if (!task) throw new NotFoundError("task", `T${taskId}`);
+  const unclaim = db.transaction(() => {
+    const task = findTaskById(db, taskId);
+    if (!task) throw new NotFoundError("task", `T${taskId}`);
 
-  if (task.status !== "claimed") {
-    throw new InvalidArgumentError(`Task is not claimed (status: ${task.status}).`);
-  }
+    if (task.status !== "claimed") {
+      throw new InvalidArgumentError(`Task is not claimed (status: ${task.status}).`);
+    }
 
-  db.prepare(
-    `UPDATE tasks SET status = 'ready', claimed_by = NULL, claimed_at = NULL,
-     updated_at = datetime('now') WHERE id = ?`,
-  ).run(taskId);
+    const result = db.prepare(
+      `UPDATE tasks SET status = 'ready', claimed_by = NULL, claimed_at = NULL,
+       version = version + 1, updated_at = datetime('now')
+       WHERE id = ? AND version = ?`,
+    ).run(taskId, task.version);
 
-  insertLogEntry(db, "task", taskId, `Unclaimed (was ${task.claimed_by})`, task.claimed_by ?? undefined, "claimed", "ready");
+    if (result.changes === 0) {
+      throw new ConflictError(
+        "Task was modified concurrently — unclaim failed. Try again.",
+        { taskId, expectedVersion: task.version },
+      );
+    }
 
-  const updated = findTaskById(db, taskId)!;
+    insertLogEntry(db, "task", taskId, `Unclaimed (was ${task.claimed_by})`, task.claimed_by ?? undefined, "claimed", "ready");
+
+    return findTaskById(db, taskId)!;
+  });
+
+  const updated = unclaim();
   const shortId = formatTaskId(updated.goal_id, updated.id);
   outputSuccess(ctx, { ...updated, shortId }, `Unclaimed task ${shortId}.`);
 }
@@ -253,10 +265,20 @@ export function changeTaskStatus(
   if (task.status === newStatus) {
     if (prUrl) {
       const normalizedPr = normalizePrRef(prUrl);
-      db.prepare(
-        `UPDATE tasks SET pr_url = ?, updated_at = datetime('now') WHERE id = ?`,
-      ).run(normalizedPr, taskId);
-      const updated = findTaskById(db, taskId)!;
+      const link = db.transaction(() => {
+        const res = db.prepare(
+          `UPDATE tasks SET pr_url = ?, version = version + 1, updated_at = datetime('now')
+           WHERE id = ? AND version = ?`,
+        ).run(normalizedPr, taskId, task.version);
+        if (res.changes === 0) {
+          throw new ConflictError(
+            "Task was modified concurrently — PR link failed. Try again.",
+            { taskId, expectedVersion: task.version },
+          );
+        }
+        return findTaskById(db, taskId)!;
+      });
+      const updated = link();
       const shortId = formatTaskId(updated.goal_id, updated.id);
       outputSuccess(ctx, { ...updated, shortId }, `Task ${shortId} is already '${newStatus}'; linked PR ${normalizedPr}.`);
       return;
@@ -307,60 +329,87 @@ export function changeTaskStatus(
     values.push(agent);
   }
 
-  values.push(taskId);
-  db.prepare(`UPDATE tasks SET ${sets.join(", ")} WHERE id = ?`).run(...values);
+  // Guard the primary transition with the version read above, then run every
+  // follow-on write inside the same transaction. Like the claim path, only the
+  // entry write needs the optimistic-lock check: SQLite serializes write
+  // transactions, so the auto-block/auto-unblock writes below cannot lose an
+  // update to an interleaving writer once we hold the transaction.
+  values.push(taskId, task.version);
 
-  const msg = reason ? `Status -> ${newStatus}: ${reason}` : `Status -> ${newStatus}`;
-  insertLogEntry(db, "task", taskId, msg, agent, task.status, newStatus);
+  const apply = db.transaction(() => {
+    const result = db
+      .prepare(`UPDATE tasks SET ${sets.join(", ")} WHERE id = ? AND version = ?`)
+      .run(...values);
 
-  // End agent session when task leaves active work states
-  if (["done", "review", "cancelled"].includes(newStatus) && task.claimed_by) {
-    endSession(db, task.claimed_by, taskId);
-  }
-
-  // Auto-block: if task moved to ready but has unsatisfied dependencies
-  if (newStatus === "ready") {
-    const unsatisfied = getUnsatisfiedDependencies(db, taskId);
-    if (unsatisfied.length > 0) {
-      const depIds = unsatisfied.map((id) => {
-        const dt = findTaskById(db, id);
-        return dt ? formatTaskId(dt.goal_id, dt.id) : `T${id}`;
-      });
-      const blockReason = `Waiting on dependencies: ${depIds.join(", ")}`;
-
-      db.prepare(
-        `UPDATE tasks SET status = 'blocked', blocked_reason = ?,
-         updated_at = datetime('now') WHERE id = ?`,
-      ).run(blockReason, taskId);
-
-      insertLogEntry(db, "task", taskId, `Auto-blocked: ${blockReason}`, agent, "ready", "blocked");
-
-      const blocked = findTaskById(db, taskId)!;
-      const shortId = formatTaskId(blocked.goal_id, blocked.id);
-      outputSuccess(ctx, { ...blocked, shortId }, `Task ${shortId}: ${task.status} -> ready -> blocked (${blockReason})`);
-      return;
+    if (result.changes === 0) {
+      throw new ConflictError(
+        "Task was modified concurrently — status change failed. Try again.",
+        { taskId, expectedVersion: task.version },
+      );
     }
+
+    const msg = reason ? `Status -> ${newStatus}: ${reason}` : `Status -> ${newStatus}`;
+    insertLogEntry(db, "task", taskId, msg, agent, task.status, newStatus);
+
+    // End agent session when task leaves active work states
+    if (["done", "review", "cancelled"].includes(newStatus) && task.claimed_by) {
+      endSession(db, task.claimed_by, taskId);
+    }
+
+    // Auto-block: if task moved to ready but has unsatisfied dependencies
+    if (newStatus === "ready") {
+      const unsatisfied = getUnsatisfiedDependencies(db, taskId);
+      if (unsatisfied.length > 0) {
+        const depIds = unsatisfied.map((id) => {
+          const dt = findTaskById(db, id);
+          return dt ? formatTaskId(dt.goal_id, dt.id) : `T${id}`;
+        });
+        const blockReason = `Waiting on dependencies: ${depIds.join(", ")}`;
+
+        db.prepare(
+          `UPDATE tasks SET status = 'blocked', blocked_reason = ?,
+           version = version + 1, updated_at = datetime('now') WHERE id = ?`,
+        ).run(blockReason, taskId);
+
+        insertLogEntry(db, "task", taskId, `Auto-blocked: ${blockReason}`, agent, "ready", "blocked");
+        return { kind: "auto-blocked" as const, blockReason };
+      }
+    }
+
+    // Auto-unblock: when a task reaches done, unblock dependents whose deps are now all satisfied
+    const unblocked: string[] = [];
+    if (newStatus === "done") {
+      const dependents = findDependents(db, taskId);
+      for (const dep of dependents) {
+        const depTask = findTaskById(db, dep.task_id);
+        if (!depTask || depTask.status !== "blocked") continue;
+        if (hasUnsatisfiedDependencies(db, dep.task_id)) continue;
+
+        db.prepare(
+          `UPDATE tasks SET status = 'ready', blocked_reason = NULL,
+           version = version + 1, updated_at = datetime('now') WHERE id = ?`,
+        ).run(dep.task_id);
+
+        insertLogEntry(db, "task", dep.task_id, `Auto-unblocked: all dependencies satisfied`, agent, "blocked", "ready");
+        unblocked.push(formatTaskId(depTask.goal_id, depTask.id));
+      }
+    }
+
+    return { kind: "normal" as const, unblocked };
+  });
+
+  const outcome = apply();
+
+  if (outcome.kind === "auto-blocked") {
+    const blocked = findTaskById(db, taskId)!;
+    const shortId = formatTaskId(blocked.goal_id, blocked.id);
+    outputSuccess(ctx, { ...blocked, shortId }, `Task ${shortId}: ${task.status} -> ready -> blocked (${outcome.blockReason})`);
+    return;
   }
 
-  // Auto-unblock: when a task reaches done, unblock dependents whose deps are now all satisfied
-  if (newStatus === "done") {
-    const dependents = findDependents(db, taskId);
-    for (const dep of dependents) {
-      const depTask = findTaskById(db, dep.task_id);
-      if (!depTask || depTask.status !== "blocked") continue;
-      if (hasUnsatisfiedDependencies(db, dep.task_id)) continue;
-
-      db.prepare(
-        `UPDATE tasks SET status = 'ready', blocked_reason = NULL,
-         updated_at = datetime('now') WHERE id = ?`,
-      ).run(dep.task_id);
-
-      const depId = formatTaskId(depTask.goal_id, depTask.id);
-      insertLogEntry(db, "task", dep.task_id, `Auto-unblocked: all dependencies satisfied`, agent, "blocked", "ready");
-
-      if (!ctx.quiet) {
-        console.error(`Unblocked ${depId} — all dependencies now done`);
-      }
+  if (!ctx.quiet) {
+    for (const depId of outcome.unblocked) {
+      console.error(`Unblocked ${depId} — all dependencies now done`);
     }
   }
 
