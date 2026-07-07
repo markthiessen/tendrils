@@ -189,6 +189,37 @@ describe("td map", () => {
   });
 });
 
+describe("td sync", () => {
+  // Drive a task to done without a PR URL so sync would normally flag it.
+  function driveToDone(id: string) {
+    td(["task", "claim", id, "--agent", "c1"]);
+    td(["task", "status", id, "in-progress"]);
+    td(["task", "status", id, "review", "--proof", "done"]);
+    td(["task", "status", id, "done"]);
+  }
+
+  it("reports unshipped done tasks in active goals", () => {
+    driveToDone("G01.T001");
+    const result = tdJson(["sync"]);
+    const ids = result.data.map((r: any) => r.shortId);
+    expect(ids).toContain("G01.T001");
+    const row = result.data.find((r: any) => r.shortId === "G01.T001");
+    expect(row.shipped).toBe(false);
+    expect(row.reason).toBe("No PR URL");
+  });
+
+  it("skips tasks in archived goals", () => {
+    // Both tasks done, one goal, archive it with --force (unshipped is fine).
+    driveToDone("G01.T001");
+    driveToDone("G01.T002");
+    td(["goal", "archive", "G01", "--force", "--summary", "done"]);
+    const result = tdJson(["sync"]);
+    const ids = result.data.map((r: any) => r.shortId);
+    expect(ids).not.toContain("G01.T001");
+    expect(ids).not.toContain("G01.T002");
+  });
+});
+
 describe("td stats", () => {
   it("shows statistics", () => {
     const result = tdJson(["stats"]);

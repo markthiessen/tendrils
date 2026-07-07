@@ -50,16 +50,22 @@ export function registerSyncCommand(program: Command): void {
       const ctx = getCtx(program);
       const db = resolveDb(program);
 
-      // Collect unshipped done tasks and in-flight tasks with PR URLs
-      const doneTasks = findAllTasks(db, { status: "done" }).filter(
-        (t) => !t.shipped,
-      );
-      const reviewTasks = findAllTasks(db, { status: "review" }).filter(
-        (t) => t.pr_url,
-      );
-      const inProgressTasks = findAllTasks(db, { status: "in-progress" }).filter(
-        (t) => t.pr_url,
-      );
+      // Collect unshipped done tasks and in-flight tasks with PR URLs.
+      // Skip tasks in archived goals — archiving takes them out of the active
+      // workflow, so sync shouldn't keep re-reporting them (e.g. a goal
+      // archived with --force while some done tasks were still unshipped).
+      const doneTasks = findAllTasks(db, {
+        status: "done",
+        excludeArchived: true,
+      }).filter((t) => !t.shipped);
+      const reviewTasks = findAllTasks(db, {
+        status: "review",
+        excludeArchived: true,
+      }).filter((t) => t.pr_url);
+      const inProgressTasks = findAllTasks(db, {
+        status: "in-progress",
+        excludeArchived: true,
+      }).filter((t) => t.pr_url);
 
       const allTasks = [...doneTasks, ...reviewTasks, ...inProgressTasks];
 

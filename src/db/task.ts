@@ -31,6 +31,7 @@ export interface TaskFilters {
   status?: string;
   claimedBy?: string;
   repo?: string;
+  excludeArchived?: boolean;
 }
 
 export function findAllTasks(
@@ -55,6 +56,9 @@ export function findAllTasks(
   if (filters?.repo !== undefined) {
     where.push("repo = ?");
     params.push(filters.repo);
+  }
+  if (filters?.excludeArchived) {
+    where.push("goal_id IN (SELECT id FROM goals WHERE archived_at IS NULL)");
   }
 
   const whereClause = where.length ? `WHERE ${where.join(" AND ")}` : "";
