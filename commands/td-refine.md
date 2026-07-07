@@ -12,13 +12,19 @@ You are filling in the local details for tasks that were planned from another re
 
 !`td task list --status backlog --json 2>/dev/null || echo "null"`
 
+_JSON array; read `shortId`, `title`, and `description` per task to spot which lack an entry point._
+
 ## Key decisions
 
-!`td decisions 2>/dev/null`
+!`td decisions --format md 2>/dev/null`
+
+_Markdown table with `ID | Decision | Tags | Agent | Date`; the conventions here constrain how you refine._
 
 ## Architecture
 
-!`td arch 2>/dev/null`
+!`td arch --format md 2>/dev/null`
+
+_Mermaid diagram plus `### Notes` bullets (`<node> (<type>) [repo]: <content>`) — use it to locate this repo's components._
 
 ## Instructions
 

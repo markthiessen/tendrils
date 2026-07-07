@@ -7,23 +7,33 @@ You are adding planned work to the tendrils map. If the goal has already been di
 
 ## Current map
 
-!`td map`
+!`td map --format md`
+
+_Markdown: `## G<n> <goal>` headings, then `- [status] G<n>.T<nnn> <title> @claimed -> <deps>` per task. Read status and dependency arrows to find open slots and ordering._
 
 ## Current stats
 
-!`td stats`
+!`td stats --format md`
+
+_Counts of goals and tasks by status._
 
 ## Workspace repos
 
 !`td repos --json`
 
+_JSON array; read `name` and `role` per repo to scope tasks with `--repo`._
+
 ## Architecture
 
-!`td architecture`
+!`td architecture --format md`
+
+_Mermaid diagram plus `### Notes` bullets — each note is `<node> (<type>) [repo]: <content>`. Read it to see how repos connect and which owns each node._
 
 ## Decisions across all repos
 
-!`td decisions --all`
+!`td decisions --all --format md`
+
+_Markdown grouped by `## <repo>`; each `- D<id>: <title> [tags]` is a convention to honor when planning. This is the stack/convention context — don't repeat it in task descriptions._
 
 ## This repo
 
