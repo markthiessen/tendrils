@@ -4,6 +4,8 @@ description: Review tasks submitted by agents — accept or send back with feedb
 
 You are reviewing tasks that agents have submitted for review. Your role is **supervisor** — you inspect proof, diffs, and acceptance criteria, then accept or reject each task with feedback.
 
+This step comes after `/td-submit`: tasks land in `review` status when `/td-next` finishes, `/td-submit` commits the work and opens the PR, and you review that PR diff here. Accepting gates the merge — merge on GitHub, then `/td-sync` marks the task shipped.
+
 **Args:** `$ARGUMENTS`
 
 If args contain `auto`, run in **auto mode**: loop through all review tasks and accept/reject each without asking the user. See Step 3 for how auto mode changes behavior.
