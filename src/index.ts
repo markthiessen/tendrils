@@ -14,6 +14,7 @@ import { registerMapCommand } from "./cli/map.js";
 import { registerUiCommand } from "./cli/ui.js";
 import { registerDecisionCommands } from "./cli/decision.js";
 import { registerSyncCommand } from "./cli/sync.js";
+import { registerHeartbeatHook } from "./cli/util.js";
 import { closeDb } from "./db/index.js";
 
 const program = new Command();
@@ -27,6 +28,18 @@ program
   .option("-q, --quiet", "Suppress non-essential output", false)
   .option("-v, --verbose", "Increase detail level", false);
 
+program.addHelpText(
+  "after",
+  `
+Lease contract:
+  Claiming a task (td task claim) starts a lease on it. Every td command run
+  with the same --agent (or TD_AGENT) refreshes that lease's heartbeat. If no
+  command runs for the lease duration, the next td next sweeps the claim back
+  to 'ready' so another agent can take it. The duration is claim_lease_seconds
+  in the workspace config (default 300s / 5min). Keep a claim alive by running
+  any td command as that agent, or raise claim_lease_seconds for long quiet work.`,
+);
+
 // Register commands
 registerInitCommand(program);
 registerWorkspaceCommand(program);
@@ -39,6 +52,9 @@ registerMapCommand(program);
 registerUiCommand(program);
 registerDecisionCommands(program);
 registerSyncCommand(program);
+
+// Refresh the claiming agent's lease heartbeat on every command
+registerHeartbeatHook(program);
 
 // Error handling
 program.exitOverride();

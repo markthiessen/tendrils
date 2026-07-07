@@ -183,6 +183,21 @@ td task undepends G01.T002 --on G01.T001   # Remove dependency
 
 Circular dependencies are detected and rejected.
 
+### Claim Lease
+
+Claiming a task starts a **lease** on it, tracked by an agent heartbeat:
+
+- **Heartbeat** — every `td` command run with the same `--agent` (or `TD_AGENT`) refreshes the claiming agent's heartbeat. You don't need to call `td log` specially; any command keeps the claim alive.
+- **Expiry** — if no command runs for the agent for `claim_lease_seconds` (default `300` / 5 min), the next `td next` sweeps the claim back to `ready` so another agent can take it. The web server runs the same sweep periodically.
+- **Configuring** — set `claim_lease_seconds` under `[workspace]` in the workspace config to lengthen the lease for long, quiet stretches of work (e.g. large builds), or shorten it for fast hand-offs.
+
+```toml
+[workspace]
+claim_lease_seconds = 900   # tolerate 15 min of silence before releasing a claim
+```
+
+The contract is also summarized in `td --help`.
+
 ### Decisions and Architecture
 
 Each repo can record technical decisions — architectural choices, conventions, and patterns that give agents context about the codebase:
@@ -321,6 +336,7 @@ Workspace-level config lives at `~/.tendrils/workspaces/<name>/config.toml` and 
 | Field | Purpose |
 |-------|---------|
 | `max_agents_per_repo` | Limit concurrent agents per repo (0 = no limit) |
+| `claim_lease_seconds` | Agent silence before a claim is released (default 300). See [Claim Lease](#claim-lease). |
 
 ## Development
 

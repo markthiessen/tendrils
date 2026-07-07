@@ -3,6 +3,8 @@ import { execFileSync, type ExecFileSyncOptions } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
+import { openWorkspaceDb } from "../../dist/db/index.js";
+import { loadWorkspaceConfig, saveWorkspaceConfig } from "../../dist/config/index.js";
 
 let testHome: string;
 let testCwd: string;
@@ -25,6 +27,15 @@ function td(args: string[]): string {
 function tdJson(args: string[]): any {
   const output = td(["--json", ...args]);
   return JSON.parse(output);
+}
+
+// Run a command carrying an agent identity via TD_AGENT (no --agent flag).
+function tdWithAgent(args: string[], agent: string): string {
+  return execFileSync(
+    "node",
+    [path.join(__dirname, "../../dist/index.js"), ...args],
+    { ...execOpts(), env: { ...process.env, TD_HOME: testHome, TD_AGENT: agent } },
+  ).toString().trim();
 }
 
 function tdFail(args: string[]): string {
@@ -52,10 +63,13 @@ function setup() {
 beforeEach(() => {
   testHome = fs.mkdtempSync(path.join(os.tmpdir(), "tendrils-wf-"));
   testCwd = fs.mkdtempSync(path.join(os.tmpdir(), "tendrils-cwd-"));
+  // Align in-process DB/config helpers with the subprocess workspace.
+  process.env.TD_HOME = testHome;
   setup();
 });
 
 afterEach(() => {
+  delete process.env.TD_HOME;
   fs.rmSync(testHome, { recursive: true, force: true });
   fs.rmSync(testCwd, { recursive: true, force: true });
 });
@@ -217,6 +231,77 @@ describe("td sync", () => {
     const ids = result.data.map((r: any) => r.shortId);
     expect(ids).not.toContain("G01.T001");
     expect(ids).not.toContain("G01.T002");
+  });
+});
+
+describe("agent lease / heartbeat", () => {
+  // Read the active session's stored heartbeat directly from the workspace DB.
+  function getHeartbeat(agent: string): string | null {
+    const db = openWorkspaceDb("test");
+    try {
+      const row = db
+        .prepare(
+          "SELECT last_heartbeat FROM agent_sessions WHERE agent_name = ? AND status = 'active' ORDER BY id DESC LIMIT 1",
+        )
+        .get(agent) as { last_heartbeat: string } | undefined;
+      return row?.last_heartbeat ?? null;
+    } finally {
+      db.close();
+    }
+  }
+
+  // Age the active session's heartbeat using a SQLite datetime expression.
+  function ageHeartbeat(agent: string, expr: string) {
+    const db = openWorkspaceDb("test");
+    try {
+      db.prepare(
+        `UPDATE agent_sessions SET last_heartbeat = ${expr} WHERE agent_name = ? AND status = 'active'`,
+      ).run(agent);
+    } finally {
+      db.close();
+    }
+  }
+
+  it("refreshes the claiming agent's heartbeat on any td command", () => {
+    td(["task", "claim", "G01.T001", "--agent", "c1"]);
+    ageHeartbeat("c1", "datetime('now','-1 hour')");
+    const before = getHeartbeat("c1");
+    expect(before).toBeTruthy();
+
+    // A non-log command carrying the agent identity should bump the heartbeat.
+    tdWithAgent(["map"], "c1");
+
+    const after = getHeartbeat("c1");
+    expect(after).not.toBe(before);
+    expect(after! > before!).toBe(true);
+  });
+
+  it("does not refresh a different agent's heartbeat", () => {
+    td(["task", "claim", "G01.T001", "--agent", "c1"]);
+    ageHeartbeat("c1", "datetime('now','-1 hour')");
+    const before = getHeartbeat("c1");
+
+    // A command from another agent must not touch c1's lease.
+    tdWithAgent(["map"], "other");
+
+    expect(getHeartbeat("c1")).toBe(before);
+  });
+
+  it("honors claim_lease_seconds when releasing stale claims", () => {
+    td(["task", "claim", "G01.T001", "--agent", "c1"]);
+    // 100s of silence: stale under a 60s lease, but fresh under the 300s default.
+    ageHeartbeat("c1", "datetime('now','-100 seconds')");
+
+    const cfg = loadWorkspaceConfig("test")!;
+    cfg.workspace.claim_lease_seconds = 60;
+    saveWorkspaceConfig("test", cfg);
+
+    // td next sweeps stale claims first (no agent → the heartbeat hook is a no-op).
+    td(["next"]);
+
+    const result = tdJson(["task", "show", "G01.T001"]);
+    expect(result.data.status).toBe("ready");
+    expect(result.data.claimed_by).toBeNull();
   });
 });
 

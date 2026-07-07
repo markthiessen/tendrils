@@ -20,6 +20,8 @@ export interface WorkspaceConfig {
     name: string;
     created_at: string;
     max_agents_per_repo?: number;
+    /** Seconds of agent silence before td next releases a claim. Default 300. */
+    claim_lease_seconds?: number;
   };
   bindings: WorkspaceBinding[];
 }
