@@ -305,6 +305,40 @@ describe("agent lease / heartbeat", () => {
   });
 });
 
+describe("version guard on task mutations", () => {
+  function version(id: string): number {
+    return tdJson(["task", "show", id]).data.version;
+  }
+
+  it("increments the version on every status change", () => {
+    td(["task", "claim", "G01.T001", "--agent", "c1"]);
+    const claimed = version("G01.T001");
+    td(["task", "status", "G01.T001", "in-progress", "--agent", "c1"]);
+    const inProgress = version("G01.T001");
+    expect(inProgress).toBeGreaterThan(claimed);
+    td(["task", "status", "G01.T001", "review", "--agent", "c1", "--proof", "done"]);
+    const inReview = version("G01.T001");
+    expect(inReview).toBeGreaterThan(inProgress);
+  });
+
+  it("increments the version on unclaim", () => {
+    td(["task", "claim", "G01.T001", "--agent", "c1"]);
+    const claimed = version("G01.T001");
+    td(["task", "unclaim", "G01.T001"]);
+    const unclaimed = version("G01.T001");
+    expect(unclaimed).toBeGreaterThan(claimed);
+  });
+
+  it("increments the version when linking a PR to an unchanged status", () => {
+    td(["task", "claim", "G01.T001", "--agent", "c1"]);
+    const before = version("G01.T001");
+    // Same-status update that only attaches a PR still bumps the version.
+    td(["task", "status", "G01.T001", "claimed", "--agent", "c1", "--pr", "owner/repo#7"]);
+    const after = version("G01.T001");
+    expect(after).toBeGreaterThan(before);
+  });
+});
+
 describe("td stats", () => {
   it("shows statistics", () => {
     const result = tdJson(["stats"]);
